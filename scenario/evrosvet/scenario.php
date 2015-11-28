@@ -17,8 +17,8 @@ $config = (object)array(
     'articul_txt' => 'articul.txt',
 //    'debug'=>1,
 
-    'phpexcel_path'=>'../../yourlamp/PHPExcel.1.8/',
-    'pclzip_path'=>'../../yourlamp/admin/libs/',
+    'phpexcel_path'=>'../../../youlamp/PHPExcel.1.8/',
+    'pclzip_path'=>'../../../youlamp/admin/libs/',
 );
 
 /**

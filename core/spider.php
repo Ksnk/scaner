@@ -49,7 +49,8 @@ Windows NT 5.1; ru; rv:1.8.0.9) Gecko/20061206 Firefox/1.5.0.9';
     text/html;q=0.9,text/plain;q=0.8,image/png,*/*;q=0.5",
             "Accept-Language: ru-ru,ru;q=0.7,en-us;q=0.5,en;q=0.3",
             "Accept-Charset: windows-1251,utf-8;q=0.7,*;q=0.7",
-            "Keep-Alive: 300");
+ //           "Keep-Alive: 300"
+        );
 
         curl_setopt($ch, CURLOPT_URL, $this->siteroot); // set url to post to
         curl_setopt($ch, CURLOPT_FAILONERROR, 1);
@@ -155,7 +156,7 @@ Curl...: v{%s}
     function uploadfile($url, $img, $_archive)
     {
         $this->curl($url);
-        require_once $this->pclZip . 'pclzip.lib.php';
+        require_once $this->pclzip_path . 'pclzip.lib.php';
         $archive = new PclZip($_archive);
         if (is_readable($_archive)) {
             $list = $archive->add(array(
