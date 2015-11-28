@@ -17,7 +17,10 @@ class spider extends scaner
     var $curl,
         $debug = 0,
         $siteroot,
-        $lasturl = array(
+        $cookie_file = 'tmp_cookie.txt',
+        $pclzip_path;
+
+    var $lasturl = array(
         'scheme' => 'http',
         'host' => '',
         'user' => '',
@@ -25,8 +28,7 @@ class spider extends scaner
         'path' => '',
         'query' => '',
         'fragment' => '',
-    ),
-        $cookie_file = 'tmp_cookie.txt';
+    );
 
     private function curl($url, $opt = array())
     {
@@ -146,16 +148,14 @@ Curl...: v{%s}
      */
     function open($url)
     {
-        //$curl
         $this->curl($url);
-
         return $this;
     }
 
     function uploadfile($url, $img, $_archive)
     {
         $this->curl($url);
-        require_once('../../admin/libs/pclzip.lib.php');
+        require_once $this->pclZip . 'pclzip.lib.php';
         $archive = new PclZip($_archive);
         if (is_readable($_archive)) {
             $list = $archive->add(array(

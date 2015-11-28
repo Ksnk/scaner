@@ -6,15 +6,19 @@
  * Time: 19:04
  */
 
-include_once 'autoload.php';
+include_once '../../autoload.php';
 
 $config = (object)array(
     'login' => 'pitersvet',
     'password' => 'z99rvYEfpa',
-    'archive' => 'evrosvet/archive.zip',
-    'excelfile' => 'evrosvet/evrosvet.xlsx',
+
+    'archive' => 'archive.zip',
+    'excelfile' => 'evrosvet.xlsx',
     'articul_txt' => 'articul.txt',
-//    'debug'=>1
+//    'debug'=>1,
+
+    'phpexcel_path'=>'../../yourlamp/PHPExcel.1.8/',
+    'pclzip_path'=>'../../yourlamp/admin/libs/',
 );
 
 /**
@@ -222,7 +226,7 @@ foreach ($config->scenario->result['result'] as $kk => $v) {
     $data_arr[] = $x;
 }
 
-require_once '../../PHPExcel.1.8/PHPExcel.php';
+require_once $config->phpexcel_path.'PHPExcel.php';
 
 $objPHPExcel = new PHPExcel();
 
