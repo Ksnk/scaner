@@ -11,17 +11,30 @@ class scaner extends base
     var $buf;
 
     /** @var mixed */
-    var $result;
+
+    var $found = false;
 
     /** @var integer */
-    var
+    private
+        $result,
+
         $filestart = 0,
 
         $till = -1,
 
         $start;
 
-    var $found = false;
+    private $tail='';
+
+    function getresult(){
+        if(empty($this->result)){
+            $x=array();
+        } else {
+            $x=$this->result;
+        }
+        $this->result=array();
+        return $x;
+    }
 
     /**
      * Строка для анализа
@@ -82,7 +95,16 @@ class scaner extends base
         if (!empty($this->handle)) {
             //if ($this->start > strlen($this->buf) - 4096) {
                 if (!feof($this->handle)) {
-                    $this->buf = substr($this->buf, $this->start+1) . fread($this->handle, 40000);
+                    $this->buf = $this->tail.substr($this->buf, $this->start+1) . fread($this->handle, 40000);
+                    $this->tail='';
+                    if (!feof($this->handle)){
+                        $x = strrpos($this->buf, "\n");
+                        if(false!==$x){
+                        $this->tail=substr($this->buf,$x+1);
+                        $this->buf=substr($this->buf,0,$x);
+                        }
+                    }
+
                     $this->filestart += $this->start;
                     $this->start = 0;
                     return true;

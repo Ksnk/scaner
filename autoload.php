@@ -41,4 +41,4 @@ class Autoload
     }
 }
 
-Autoload::register(__DIR__.'/core',__DIR__);
+Autoload::register(dirname(__FILE__).'/core',dirname(__FILE__));
