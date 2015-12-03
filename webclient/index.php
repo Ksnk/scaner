@@ -31,9 +31,15 @@ class action
     function do_parse_logs($log, $ip)
     {
         include_once 'scenario/lapsi.log/grep_logs_scenario.php';
-        $scaner = new grep_logs_scenario();
-        $scaner->initialize();
-        $scaner->scan_access_log($log, $ip);
+        $config = (object)array();
+        $config->scaner = new scaner();
+        $config->joblist = new joblist();
+        $config->scenario = new grep_logs_scenario();
+
+        $config->scaner->init($config);
+        $config->joblist->init($config);
+        $config->scenario->init($config);
+        $config->scenario->scan_access_log($log, $ip);
     }
 
     /**

@@ -27,41 +27,16 @@ class grep_logs_scenario extends scenario
             $this->scaner->scan('~'.preg_quote($pattern).'[^\n]+~',0);
             if($this->scaner->found){
                 $result=$this->scaner->getresult();
-                if(!preg_match('~\.(jpe?g|gif|js|ico|css|png)(\?\d+?|)\s+HTTP/1~',$result[0])){
-                    echo $result[0]."\n\n";
+                $result=$result[0];/*
+            $this->scaner->scan($pattern);
+            if($this->scaner->found){
+                $result=$this->scaner->getline();*/
+                if(!preg_match('~\.(jpe?g|gif|js|ico|css|png)(\?\d+?|)\s+HTTP/1~',$result)){
+                    $this->result[]= $result;
                 }
             } else
                 break;
         } while (true);
     }
 
-    function initialize(){
-        $config = (object)array(
-
-        );
-        $config->scaner = new scaner();
-        $config->joblist = new joblist();
-        $config->scenario = $this;
-
-        $config->scaner->init($config);
-        $config->joblist->init($config);
-        $config->scenario->init($config);
-
-    }
-
 }
-/*
-ini_set('display_error', 1);
-error_reporting(E_ALL);
-
-echo '<pre>';
-
-$jobs = $config->joblist;
-$jobs->append_scenario('scan_access_log','lapsi.msk.ru.access.log.0.gz','62.133.162.140');
-
-$config->scenario->result['result'] = array();
-//print_r($jobs);
-while ($jobs->donext()) {
-    ;
-}
-*/

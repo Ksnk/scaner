@@ -95,7 +95,11 @@ class scaner extends base
         if (!empty($this->handle)) {
             //if ($this->start > strlen($this->buf) - 4096) {
                 if (!feof($this->handle)) {
-                    $this->buf = $this->tail.substr($this->buf, $this->start+1) . fread($this->handle, 40000);
+                    if($this->start>=strlen($this->buf)){
+                        $this->buf = $this->tail;
+                    } else
+                        $this->buf = substr($this->buf, $this->start+1).$this->tail ;
+                    $this->buf .= fread($this->handle, 40000);
                     $this->tail='';
                     if (!feof($this->handle)){
                         $x = strrpos($this->buf, "\n");
@@ -121,10 +125,12 @@ class scaner extends base
      */
     function scan($reg)
     {
-        $this->prepare();
+        if(strlen($this->buf)-4096>$this->start)
+            $this->prepare();
         do {
+            $this->found = false;
+
             if ($reg{0} == '/' || $reg{0} == '~') { // so it's a regular expresion
-                $this->found = false;
                 $res = preg_match($reg, $this->buf, $m, PREG_OFFSET_CAPTURE, $this->start);
                 if ($res) {
                     $this->found = true;
@@ -151,7 +157,11 @@ class scaner extends base
                 $y = stripos($this->buf, $reg, $this->start);
                 if (false !== $y) {
                     $this->found = true;
-                    $this->start = $y + strlen($reg);
+                    $x = strpos($this->buf, "\n", $y + strlen($reg));
+                    if(false===$x)
+                        $this->start=strlen($this->buf);
+                    else
+                        $this->start = $x-1;
                 }
             }
             if (!$this->found && !empty($this->handle) && !feof($this->handle)) { //3940043
@@ -171,6 +181,18 @@ class scaner extends base
                 break;
         } while (true);
         return $this;
+    }
+
+    /**
+     * Получить строку, вокруг позиции Start
+     */
+    function getline(){
+        if($this->start==0) $x=0;
+        else $x=strrpos($this->buf, "\n",$this->start-strlen($this->buf));
+        $y=strpos($this->buf, "\n",$this->start);
+        if(false===$x) $x=0; else $x++;
+        if(false===$y) return substr($this->buf,$x);
+        return substr($this->buf,$x,$y-$x);
     }
 
     /**
