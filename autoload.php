@@ -21,9 +21,8 @@ class Autoload
 
         if (!is_array($dir)) $dir = array($dir);
         foreach ($dir as $d) {
-            $loader->dir = array_merge($loader->dir, explode(';', $d));
+            $loader->dir = array_unique(array_merge($loader->dir, explode(';', $d)));
         }
-
     }
 
     public function __invoke($classname)
@@ -41,4 +40,4 @@ class Autoload
     }
 }
 
-Autoload::register(dirname(__FILE__).'/core',dirname(__FILE__));
+Autoload::register(array(dirname(__FILE__).'/core',dirname(__FILE__)));

@@ -4,7 +4,7 @@
  * Класс для парсинга Doсtype информации и создания контролов для утилит.
  *
  * Описатели полей
- * @param type $var :type[values] description
+ * @param [type] $var [:type][\[values\]] [description]
  * пример:
  * @param int|string $c :select[one|3:two|4:four|five] 3-й параметр
  * @param int|string $c :select[:none|~dir('*.log')] 3-й параметр
@@ -51,7 +51,10 @@ class x_parser {
             for($i=0;$i<count($parts)-1;$i++){
                 if(isset($cur[$parts[$i]])) {
                     $cur=&$cur[$parts[$i]];
-                    $value=$cur;
+                    if(is_string($cur))
+                        $value=stripslashes($cur);
+                    else
+                        $value=$cur;
                 }
                 else {
                     $value=null;
@@ -67,12 +70,13 @@ class x_parser {
             $result=implode(' ',$result).'>';
             if(!isset($opt['values'])) $opt['values']=array();
             foreach($opt['values'] as $v){
-                if(false!==($kk=strpos($v,':'))){
+                if(false!==($kk=strrpos($v,':'))){
                     $k=substr($v,0,$kk);
                     $v=substr($v,$kk+1);
                 } else {
                     $k=$v;
                 }
+                //var_dump($value);var_dump($k);
                 $selected=($value==$k?' selected':'');
                 if($k!=$v){
                     $result.='<option'.$selected.' value="'.$k.'">'.$v.'</option>';
@@ -120,12 +124,12 @@ class x_parser {
         return $result;
     }
 
-
-    static function reflect($class){
+    private static function reflect($class){
         return new ReflectionClass($class);
     }
 
-    static function getParameters($method,$class_name){
+    static function getParameters($method,$class_name,$include=''){
+        if(!empty($include)) include_once($include);
         $class = self::reflect($class_name);
         $action = new $class_name();
         $result=array();
@@ -179,7 +183,7 @@ class x_parser {
                     $xpar[$par->name] = array(
                         'type' => 'text',
                         'function' => $xname,
-                        'name' => $method->name.'['.$par->name.']',
+                        'name' => $xname.'['.$par->name.']',
                     );
                     if ($par->isOptional()) {
                         $xpar[$par->name]['default'] = $par->getDefaultValue();
@@ -219,9 +223,12 @@ class x_parser {
                                             $mm[1]=str_replace('config.'.$mmm[1],$action->config[$mmm[1]],$mm[1]);
                                         }
                                         // echo $mm[1];
+                                        $cwd=getcwd();
+                                        chdir(dirname($class->getFileName()));
                                         foreach(glob($mm[1], GLOB_BRACE) as $g){
-                                            $xxx[]=iconv('cp1251','utf-8',$g).':'.iconv('cp1251','utf-8',basename($g));
+                                            $xxx[]=iconv('cp1251','utf-8',realpath($g)).':'.iconv('cp1251','utf-8',basename($g));
                                         }
+                                        chdir($cwd);
 
                                     } else
                                         $xxx[]=$_x;

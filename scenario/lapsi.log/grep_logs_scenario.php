@@ -7,32 +7,26 @@
 /**
  * Читалка длинных логов. Греп по IP.
  * Class grep_logs_scenario
+ * @property scaner $scaner
  */
 class grep_logs_scenario extends scenario
 {
 
     /**
-     * @var scaner
+     * Сканирование логов по IP
+     * @param string $log :select[:все|~dir(*.{gz,log})] лог для поиска
+     * @param string $pattern :text IP для поиска
      */
-    var $scaner;
 
-    /**
-     * парсер логов - простой греп,  поиск по IP, выкидываем обращения к картинкам и скриптам
-     * @param $log
-     * @param $pattern
-     */
-    function scan_access_log($log,$pattern){
+    function do_scanlog($log,$pattern){
         $this->scaner->newhandle($log);
         do {
             $this->scaner->scan('~'.preg_quote($pattern).'[^\n]+~',0);
             if($this->scaner->found){
                 $result=$this->scaner->getresult();
-                $result=$result[0];/*
-            $this->scaner->scan($pattern);
-            if($this->scaner->found){
-                $result=$this->scaner->getline();*/
+                $result=$result[0];
                 if(!preg_match('~\.(jpe?g|gif|js|ico|css|png)(\?\d+?|)\s+HTTP/1~',$result)){
-                    $this->result[]= $result;
+                    echo $result;
                 }
             } else
                 break;

@@ -1,0 +1,47 @@
+input[type=text] {
+    width: 90%;
+}
+
+label {
+    display: block;
+    clear: both;
+    width: 99%;
+}
+
+label input[type=text], label textarea, label select {
+    width: 70%;
+    float: right;
+}
+
+label > label {
+    width: 70%;
+    float: right;
+}
+
+label > label input {
+
+}
+
+textarea {
+    width: 90%;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+table, td, th {
+    border: 1px solid gray;
+}
+
+th {
+    background-color: lightgray;
+    color: gray;
+}
+
+pre {
+    min-width: 100%;
+    overflow-x: scroll;
+    white-space: pre-wrap;
+}
