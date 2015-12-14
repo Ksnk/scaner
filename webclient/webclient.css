@@ -24,6 +24,7 @@ label > label input {
 
 textarea {
     width: 90%;
+    height: 300px;
 }
 
 table {

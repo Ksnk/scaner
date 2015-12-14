@@ -203,7 +203,7 @@ class scaner
                     }
                 }
             } else { // it's a plain text
-                $y = stripos($this->buf, $reg, $this->start);
+                $y = stripos($this->buf, trim($reg), $this->start);
                 if (false !== $y) {
                     if ($this->till > 0 && $this->filestart+$y + strlen($reg) > $this->till) {
                         $this->found = false;
@@ -215,6 +215,9 @@ class scaner
                         $this->start=strlen($this->buf);
                     else
                         $this->start = $x-1;
+                    $xx = strrpos($this->buf, "\n", $y-strlen($this->buf));
+                   // echo $xx,' ',$y,' ',$this->start,"\n";
+                    $this->result[] = substr($this->buf,$xx,$this->start-$xx);
                 }
             }
             if (!$this->found && !empty($this->handle) && !feof($this->handle)) { //3940043

@@ -7,6 +7,10 @@ class scenario extends base {
      */
     var $joblist;
 
+    function __construct($joblist=null){
+        $this->joblist=$joblist;
+    }
+
     /**
      * Просто результат операции, чтобы было что выковыривать.
      * @var

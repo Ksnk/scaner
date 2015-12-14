@@ -16,6 +16,18 @@
  * Конструкция config.XXX заменяется на поле XXX
  */
 class x_parser {
+    private static $_templates=array(
+        'select'=>array(
+            '<label>{{title}}<select name="{{name}}">{{_values}}</select>',
+            '_values'=>'<option name={{name}}>'
+        ),
+        '*'=>'<label>{{title}}<input type="{{type}}" name="{{name}}"[ value="{{value}}"]/></label>',
+
+    );
+
+    static function template($type,$template=''){
+
+    }
 
     /**
      * $opt [{title: текст лабеля, type: тип контрола, tag: тег контрола}]
@@ -23,8 +35,7 @@ class x_parser {
      * @param array $opt
      * @param array $values
      * @return array|string
-*/
-
+     */
     static function createInput($opt=array(),$values=array()){
         if(!isset($opt['type']))
             $opt['type']='text';

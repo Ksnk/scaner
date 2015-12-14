@@ -60,7 +60,7 @@ function uc2html($str) {
     return html_entity_decode($ret,ENT_NOQUOTES,'UTF-8');/**/
 }
 
-    include (dirname(__FILE__).'/excel-reader.php');
+    include(dirname(__FILE__) . '/excel-reader.php');
     $err_corr = "Неподдерживаемый формат или битый файл";
 
     $excel_file_size;

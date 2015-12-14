@@ -85,7 +85,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $res = x_parser::getParameters('', $class,$top['dir']);
         $param=array();
         foreach ($res[$class][$method]['param'] as $name => $par) {
-            $param[] = stripslashes(__($_POST[$action][$name]));
+            //$param[] = stripslashes(__($_POST[$action][$name]));
+            $param[] = __($_POST[$action][$name]);
         }
 
         $a->joblist->append_scenario($top,$param);
