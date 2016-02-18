@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<inventory xmlns="http://www.demandware.com/xml/impex/inventory/2007-05-31">
+    <inventory-list>
+        <header list-id="WSA">
+            <default-instock>false</default-instock>
+            <description>Lapsi, RU</description>
+            <use-bundle-inventory-only>false</use-bundle-inventory-only>
+        </header>
+
+        <records>
+            <record product-id="17018">
+                <allocation>0</allocation>
+                <allocation-timestamp>2016-01-11T09:30:11.000Z</allocation-timestamp>
+                <perpetual>false</perpetual>
+                <preorder-backorder-handling>none</preorder-backorder-handling>
+                <preorder-backorder-allocation>0</preorder-backorder-allocation>
+                <ats>4</ats>
+                <on-order>0</on-order>
+                <turnover>0</turnover>
+            </record>
+
+            <record product-id="20597">
+                <allocation>0</allocation>
+                <allocation-timestamp>2016-01-11T09:30:11.000Z</allocation-timestamp>
+                <perpetual>false</perpetual>
+                <preorder-backorder-handling>none</preorder-backorder-handling>
+                <preorder-backorder-allocation>0</preorder-backorder-allocation>
+                <ats>1</ats>
+                <on-order>0</on-order>
+                <turnover>0</turnover>
+            </record>
+
+        </records>
+    </inventory-list>
+</inventory>

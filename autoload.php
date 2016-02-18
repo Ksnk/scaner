@@ -27,16 +27,17 @@ class Autoload
 
     public function __invoke($classname)
     {
-        //echo($classname.' '.getcwd().' '.json_encode($this->dir)."\n");
-        foreach ($this->dir as $d) {
-            $filename = $d . '/' . str_replace('\\', '/', $classname) . '.php';
-            if (!file_exists($filename)) {
+       foreach ($this->dir as $d) {
+           $filename = $d . '/' . str_replace('\\', '/', $classname) . '.php';
+           if (!file_exists($filename)) {
                 // echo('!exists '.$filename."\n");
-                continue;
-            }
-            require_once($filename);
+               continue;
+           }
+           require_once($filename);
+           return true;
         }
-        return true;
+        echo($classname.' '.getcwd().' '.json_encode($this->dir)."\n");
+        return false;
     }
 }
 

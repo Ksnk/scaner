@@ -33,4 +33,51 @@ class UTILS {
         } else
             return $tm-$ttm;
     }
+
+    static function sphinxSearch($q, $index = 'titles',$match=7,$limit=30)
+    {
+        $suffix=' @brand 74606'; // Ищем только Стокке
+        if (empty($q)) return '';
+        if(!UTILS::detectUTF8($q))$q=iconv('cp1251','utf-8',$q);
+
+        require_once $_SERVER["DOCUMENT_ROOT"] . "/../lapsi.msk.ru/az/helpers/sphinxapi.php";
+        $cl = new SphinxClient();
+        $host = 'localhost';
+        $port = '9312';
+        $cl->SetServer($host, $port);
+        $cl->SetLimits(0, 1000);
+        $q_matches = '';
+
+        // поиск строки по названиям
+        while (true) {
+            if($match & 1){
+            $cl->SetLimits(0, $limit);
+            $cl->SetMatchMode(SPH_MATCH_ALL);
+
+            $q_matches = $cl->Query(html_entity_decode($q, ENT_NOQUOTES, 'UTF-8').$suffix, $index);
+            if (is_array($q_matches) && isset($q_matches["matches"])) break;
+            }
+ /*           if($match & 4){
+                $cl->SetLimits(0, $limit);
+                $cl->SetMatchMode(SPH_MATCH_ALL);
+                    $q_matches = $cl->Query('*' . preg_replace('/\s+/', '* *', html_entity_decode(strtr($q, '-(), .', '     ') . '*', ENT_NOQUOTES, 'UTF-8')).$suffix, $index);
+            if (is_array($q_matches) && isset($q_matches["matches"])) break;
+
+            }*/
+            if($match & 2){
+            $cl->SetLimits(0, $limit);
+            $cl->SetMatchMode(SPH_MATCH_ANY);
+            $q_matches = $cl->Query(html_entity_decode($q, ENT_NOQUOTES, 'UTF-8').$suffix, $index);
+            if (is_array($q_matches) && isset($q_matches["matches"])) break;
+            }
+
+        }
+        ENGINE::debug($q_matches);
+
+        if (is_array($q_matches) && isset($q_matches["matches"])) {
+            $q_matches = array_keys($q_matches["matches"]);
+        } else
+            $q_matches = array();
+        return $q_matches;
+    }
 }

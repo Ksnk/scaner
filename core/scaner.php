@@ -2,12 +2,16 @@
 
 /**
  * простой сканер разнобольших текстовых файлов, можно в гнузипе
- * Предназначен для работы в связке с транспортными классами - spider/mailer
- * и для сольного использования - анализ логов.
+ * Предназначен как родитель для транспортных классов - spider/mailer
+ * так и для сольного использования - анализ логов.
  * Class scaner
  */
 class scaner
 {
+
+    const MAX_BUFSIZE=60000; // максимальный размер буфера чтения
+    const MIN_BUFSIZE=30000; // минимальный размер строки буфера.
+
 
     /** @var string */
     private $buf;
@@ -30,6 +34,11 @@ class scaner
 
     var $finish=0;
 
+    /**
+     * Выдать результат работы функций сканирования.
+     * При этом чистится сохраненный результат
+     * @return array|int
+     */
     function getresult(){
         if(empty($this->result)){
             $x=array();
@@ -99,9 +108,10 @@ class scaner
     }
 
     /**
-     * @return bool
+     * дочитываем буфер, если надо
+     * @return bool - последний ли это препаре или нет todo: непонятно накой такой результат нужен
      */
-    function prepare()
+    protected function prepare()
     {
         if (!empty($this->handle)) {
             //if ($this->start > strlen($this->buf) - 4096) {
@@ -150,6 +160,11 @@ class scaner
         return $this;
     }
 
+    /**
+     * установить курсор чтения в позицию $pos
+     * @param $pos
+     * @return $this
+     */
     function position($pos){
         if (!empty($this->handle)) {
             if($this->filestart<=$pos && (strlen($this->buf)+$this->filestart)>$pos){
@@ -164,6 +179,7 @@ class scaner
         } else {
             $this->start=$pos;
         }
+        return $this;
     }
 
     /**
@@ -175,6 +191,7 @@ class scaner
     {
         if(strlen($this->buf)-4096<$this->start)
             $this->prepare();
+
         do {
             $this->found = false;
 
@@ -206,7 +223,7 @@ class scaner
                 $y = stripos($this->buf, trim($reg), $this->start);
                 if (false !== $y) {
                     if ($this->till > 0 && $this->filestart+$y + strlen($reg) > $this->till) {
-                        $this->found = false;
+                        $this->position($this->till);
                         break;
                     }
                     $this->found = true;
@@ -256,14 +273,22 @@ class scaner
      * @param $reg
      * @return $this
      */
-    function until($reg)
+    function until($reg='')
     {
+        if(empty($reg)){
+            $this->till=-1;
+            return $this;
+        }
         $oldstart = $this->filestart+$this->start;
+        $res=$this->result;$f=$this->found;
+
         $this->scan($reg);
+
         if($this->found){
             $this->till = $this->filestart+$this->start;
-            $this->position($this->filestart+$oldstart);
+            $this->position($oldstart);
         }
+        $this->found=$f;$this->result=$res;
         return $this;
     }
 

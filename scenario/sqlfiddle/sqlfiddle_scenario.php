@@ -44,7 +44,7 @@ class sqlfiddle_scenario extends scenario
 
             echo $sqls.";\n";
             $result=ENGINE::db('debug once')->select($sqls);
-            if(is_array($result)){
+            if(is_array($result) && !empty($result)){
                 $keys=array_keys($result[0]);
                 echo '<table>';
                 echo '<tr><td></td>';

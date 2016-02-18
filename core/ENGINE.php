@@ -105,11 +105,7 @@ class xData implements  Iterator {
 }
 
 /**
- * @method static xDatabase db
  * @method static bool has_rights
- * @method static set_option
- * @method static link
- * @method static action
  * @method static run
  */
 class ENGINE
@@ -434,7 +430,7 @@ class ENGINE
         }
         if (strlen($key) > 40) $key = md5($key);
         if (is_null($value)) {
-            if ($GLOBALS['SERVER_PORT'] == "8080") return false;
+            if (self::_($GLOBALS['SERVER_PORT']) == "8080") return false;
             return self::$memcached->get($key);
         } else {
             self::$memcached->set($key, $value, MEMCACHE_COMPRESSED,  $time);

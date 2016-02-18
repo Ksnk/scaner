@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<project name="Scaner" default="buildLapsi">
+
+    <taskdef name="preprocess" classname="phing.tasks.ext.preprocessor.preprocessTask"/>
+
+    <target name="buildLapsi" description="build twig project files">
+        <preprocess config="configLapsi.xml">
+            <param name="target" value="release"/>
+            <param name="dst" value="lapsiBuild"/>
+        </preprocess>
+    </target>
+
+
+</project>
