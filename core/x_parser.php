@@ -16,6 +16,30 @@
  * Конструкция config.XXX заменяется на поле XXX
  */
 class x_parser {
+
+    static $_int;
+
+    static $templates=array(
+        'textarea'=>'<label for="{{UID}}">{{label}}</label><textarea {{attr}} id="{{UID}}">{{value}}</textarea>',
+        'radiogroup'=>'<fieldset><legend>{{label}}</legend>{{radio}}</fieldset>',
+        'radio_option'=>'<div class="radio">
+  <label><input type="radio" name="{{name}}" {{checked}}>{{label}}</label>
+</div>',
+        'checkbox'=>'<div class="checkbox">
+  <label><input type="checkbox" name="{{name}}[]" value="{{value}}" {{checked}}>{{label}}</label>
+</div>',
+        'file'=>'<div class="upload"><label class="file_upload dropzone">
+    <input type="file" name="<?= $file_uploader_name ?>[]" multiple="multiple">
+</label></div>',
+    );
+
+    static private $UID_CNT=1000;
+
+    static function UID(){
+        return 'x'.(self::$UID_CNT++);
+    }
+
+
     private static $_templates=array(
         'select'=>array(
             '<label>{{title}}<select name="{{name}}">{{_values}}</select>',
@@ -29,6 +53,30 @@ class x_parser {
 
     }
 
+    static function gotByName($values,$name=''){
+        $result=null;
+        if(isset($name) && false===strpos($name,'[') && isset($values[$name])){
+            $result=$values[$name];
+        } else if(isset($name) && false!==strpos($name,'[')) {
+            $parts=preg_split('/\]\[|\[|\]/',$name);
+            $cur=&$values;
+            for($i=0;$i<count($parts)-1;$i++){
+                if(isset($cur[$parts[$i]])) {
+                    $cur=&$cur[$parts[$i]];
+                    if(is_string($cur))
+                        $result=stripslashes($cur);
+                    else
+                        $result=$cur;
+                }
+                else {
+                    $result=null;
+                    break;
+                }
+            }
+        }
+        return $result;
+    }
+
     /**
      * $opt [{title: текст лабеля, type: тип контрола, tag: тег контрола}]
      *
@@ -37,13 +85,17 @@ class x_parser {
      * @return array|string
      */
     static function createInput($opt=array(),$values=array()){
+        //print_r($opt);
         if(!isset($opt['type']))
             $opt['type']='text';
-        if($opt['type']=='textarea') $result=array('textarea');
+        if($opt['type']=='textarea') ;
         elseif($opt['type']=='select') $result=array('select');
         elseif($opt['type']=='button') $result=array('button');
         else {
             $result=array('input','type="'.$opt['type'].'"');
+        }
+        if(empty($opt['title'])){
+            $opt['title']=$opt['parname'];
         }
 
         if(isset($opt['name']))
@@ -53,33 +105,20 @@ class x_parser {
 
         if(isset($opt['maxlength']))
             $result[]='maxlength="'.$opt['maxlength'].'"';
-        $value=null;
-        if(isset($opt['name']) && false===strpos($opt['name'],'[') && isset($values[$opt['name']])){
-            $value=$values[$opt['name']];
-        } else if(isset($opt['name']) && false!==strpos($opt['name'],'[')) {
-            $parts=preg_split('/\]\[|\[|\]/',$opt['name']);
-            $cur=&$values;
-            for($i=0;$i<count($parts)-1;$i++){
-                if(isset($cur[$parts[$i]])) {
-                    $cur=&$cur[$parts[$i]];
-                    if(is_string($cur))
-                        $value=stripslashes($cur);
-                    else
-                        $value=$cur;
-                }
-                else {
-                    $value=null;
-                    break;
-                }
-            }
+
+        if(isset($opt['class'])){
+            $cv=is_array($opt['class'])?implode(' ',$opt['class']):$opt['class'];
+            $result[]='class="'.$cv.'"';
         }
+        $value=self::gotByName($values,$opt['name']);//null;
         if(is_null($value)){
             if(isset($opt['default']))
                 $value=$opt['default'];
         }
         if($opt['type']=='select'){
-            $result=implode(' ',$result).'>';
+          //  $result=implode(' ',$result).'>';
             if(!isset($opt['values'])) $opt['values']=array();
+            $result='';
             foreach($opt['values'] as $v){
                 if(false!==($kk=strrpos($v,':'))){
                     $k=substr($v,0,$kk);
@@ -87,16 +126,22 @@ class x_parser {
                 } else {
                     $k=$v;
                 }
-                //var_dump($value);var_dump($k);
+
                 $selected=($value==$k?' selected':'');
-                if($k!=$v){
-                    $result.='<option'.$selected.' value="'.$k.'">'.$v.'</option>';
-                } else {
-                    $result.='<option'.$selected.'>'.$v.'</option>';
-                }
+
+                $result.=self::tpl(array(
+                    'name'=>$opt['name'],
+                    'label'=>$v,
+                    'value'=>$k,
+                    'selected'=>$selected,
+                ),self::$templates['select_option']);
             }
-            $result.='</select';
-            $result=array($result);
+            return self::tpl(array(
+                'label'=>isset($opt['title'])?$opt['title']:'',
+                'UID'=>self::UID(),
+                'name'=>$opt['name'],
+                'radio'=>$result,
+            ),self::$templates['select']);
         } elseif($opt['type']=='radio' || $opt['type']=='checkbox'){
 
             if(!isset($opt['values'])) {
@@ -106,7 +151,7 @@ class x_parser {
                 else
                     $opt['values'][]=1;
             }
-            $xresult=$result; $result='';
+            $result='';
             foreach($opt['values'] as $v){
                 if(false!==($kk=strpos($v,':'))){
                     $k=substr($v,0,$kk);
@@ -114,25 +159,67 @@ class x_parser {
                 } else {
                     $k=$v;
                 }
-                $checked=($value==$k?' checked':'');
-                if($k!=$v){
-                    $result.='<label><'.implode(' ',$xresult).' value="'.$k.'"'.$checked.'><span>'.$v.'</span></label>';
-                } else {
-                    $result.='<'.implode(' ',$xresult).' value="'.$k.'"'.$checked.'>';
-                }
+                if(is_array($value))
+                    $checked=in_array($k,$value)?' checked':'';
+                else
+                    $checked=($value==$k?' checked':'');
+                $result.=self::tpl(array(
+                    'name'=>$opt['name'],
+                    'label'=>$v,
+                    'value'=>$k,
+                    'checked'=>$checked,
+                ),self::$templates[$opt['type']=='checkbox'?'checkbox':'radio_option']);
             }
-            $result=array(substr($result,1,strlen($result)-2));
-        } elseif($opt['type']=='textarea'){
-            $result=array(implode(' ',$result).'>'.htmlspecialchars($value).'</textarea');
-        } else {
-            $result[]='value="'.htmlspecialchars($value).'"';
-        }
+            return self::tpl(array(
+                'label'=>$opt['title'],
+                'radio'=>$result,
+            ),self::$templates[$opt['type']=='checkbox'?'radiogroup':'radiogroup']);
+            //$result=array(substr($result,1,strlen($result)-2));
+        } elseif($opt['type']=='file' || $opt['type']=='files'){
+            if(empty($opt['values'])){
+                $opt['values']=array('*.*');
+            }
+            $files=array();
+            foreach($opt['values'] as $mask){
+               $files=array_merge($files,glob(TEMP_DIR.$mask));
+            }
+            $result='';
+            foreach($files as $f){
+                $result.=self::tpl(array(
+                    'name'=>$opt['name'],
+                    'label'=>$f,
+                    'value'=>$f,
+                ),self::$templates['select_option']);
+            }
 
-        $result='<'.implode(' ',$result).'>';
-        if(isset($opt['title'])){
-            $result= '<label>'.$opt['title'].$result.'</label>';
+            return self::tpl(array(
+                'UID'=>self::UID(),
+                'name'=>$opt['name'],
+                'label'=>$opt['title'],
+                'radio'=>$result,
+                //'attr'=>implode(' ',$result),
+            ),self::$templates[$opt['type']]);
+        } else {
+            $tp=array(
+                'textarea'=>'textarea',
+               /* 'text'=>'labeledinput',
+                'integer'=>'labeledinput',
+                'int'=>'labeledinput'*/
+            );
+            if(isset($tp[$opt['type']])){
+                $tpl=self::$templates[$tp[$opt['type']]];
+            } else {
+                $tpl=self::$templates['labeledinput'];
+            }
+            return self::tpl(array(
+                'UID'=>self::UID(),
+                'name'=>$opt['name'],
+                'label'=>$opt['title'],
+                'value'=>htmlspecialchars($value),
+                'attr'=>implode(' ',$result),
+            ),$tpl);
         }
-        return $result;
+       // return $result;
     }
 
     private static function reflect($class){
@@ -154,6 +241,7 @@ class x_parser {
 
             $descr=explode('@',preg_replace('#@[.\s\r\n]+|^\s*\/\*\*?|^\s*\*\/|^\s*\*#m','',$comment).'@');
             $result[$class_name][$method->name]['title']=trim($descr[0]);
+            $result[$class_name][$method->name]['description']=$descr;
             $result[$class_name][$method->name]['param']=array();
 
             if (!empty($comment)) {
@@ -175,11 +263,14 @@ class x_parser {
                             array('(?:',')?'),
                             $mask
                         );
-                        if(count($mm[1])>1){
+                        if(count($mm[1])>0){
+                            //ENGINE::debug($mask);
                             $mask=preg_replace(
-                                array('#\{\w+\}\(\?\:;/#','#\{\w+\}/#'),array('([^;]+)(?:;','(.*)'),$mask
+                                array('#{\w+}\(\?\:;#','#{\w+}#'),array('([^;]*)(?:;','(.*)'),$mask
                             );
                         }
+                        //ENGINE::debug($mask,$m[1],$mm[1]);
+
                         preg_match('/'.$mask.'$/',$m[1],$mmm);
                         foreach($mm[1] as $k=>$xx){
                             if(isset($mmm[1+$k])){
@@ -195,6 +286,7 @@ class x_parser {
                         'type' => 'text',
                         'function' => $xname,
                         'name' => $xname.'['.$par->name.']',
+                        //'title'=>$par->name,
                     );
                     if ($par->isOptional()) {
                         $xpar[$par->name]['default'] = $par->getDefaultValue();
@@ -246,7 +338,9 @@ class x_parser {
                                 }
                                 $xpar[$par->name]['values']=$xxx;
                             }
-                            if ('' != trim($m[3]))
+                            if ('' == trim($m[3]))
+                                $xpar[$par->name]['title']=$par->name;
+                            else
                                 $xpar[$par->name]['title'] = $m[3];
                         }
                     }
@@ -256,6 +350,26 @@ class x_parser {
             }
         }
         return $result;
+    }
+
+    static function _ifelse($m){
+        if(''!=trim(self::$_int[$m[1]])) return $m[2];
+        if(empty($m[3])) return '';
+        return $m[3];
+    }
+
+    static function tpl($par,$template){
+        self::$_int=$par;
+        $template=preg_replace_callback(
+            '~{%\s*if\s*(.+?)\s*%}(.*?)(?:{%\s*else\s*%}\s*(.*?))?\s*{%\s*endif\s*%}~si',
+            array(__CLASS__,'_ifelse'),
+            $template
+        );
+
+        foreach($par as $k=>$v){
+            $template=preg_replace('/{{\s*'.preg_quote($k).'\s*}}/i',$v,$template);
+        }
+        return $template;
     }
 
 }

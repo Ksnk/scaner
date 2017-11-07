@@ -37,8 +37,7 @@ ver: '.$tag.', Last build: '.$buildtime.'
         <file>core/*.*</file>
         <file>libs/**/*.*</file>
         <file>autoload.php</file>
-        <file>scenario/stokke.com/*_scenario.php</file>
-        <file>scenario/lapsi/*_scenario.php</file>
+        <file>scenario/braindesign/*_scenario.php</file>
         <file>scenario/x_parser/*</file>
         <file>webclient/*.*</file>
     </files>

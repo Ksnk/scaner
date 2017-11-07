@@ -7,6 +7,8 @@
  */
 
 class UTILS {
+    
+    static $months_rp=array('Января','Февраля','Марта','Апреля','Мая','Июня','Июля','Августа','Сентября','Октября','Ноября','Декабря');
 
     static function detectUTF8 ($string){
         return preg_match('%(?:
@@ -25,18 +27,18 @@ class UTILS {
      * @param bool $print
      * @return mixed
      */
-    static function mkt($print=false){
-        static $tm ; $ttm = $tm ; $tm= microtime(1) ;
+    static function mkt($print=false,$save=true){
+        static $tm ; $ttm = $tm ; if($save)$tm= microtime(1) ;
         if($print) {
             printf(" %.03f sec spent%s (%s)\n" ,$tm-$ttm,is_string($print)?' for '.$print:'',date("Y-m-d H:i:s"));
             return false;
         } else
-            return $tm-$ttm;
+            return microtime(1)-$ttm;
     }
 
     static function sphinxSearch($q, $index = 'titles',$match=7,$limit=30)
     {
-        $suffix=' @brand 74606'; // Ищем только Стокке
+        $suffix='';//' @brand 74606'; // Ищем только Стокке
         if (empty($q)) return '';
         if(!UTILS::detectUTF8($q))$q=iconv('cp1251','utf-8',$q);
 
@@ -80,4 +82,138 @@ class UTILS {
             $q_matches = array();
         return $q_matches;
     }
+
+    /**
+     * scan phar files for files matches the mask
+     * @param $phar
+     * @param $mask
+     * @return array
+     */
+    static function scanPharFile($phar,$mask){
+        if(!$phar instanceof Phar){
+            $phar=new Phar($phar);
+        }
+        $iterator = new RecursiveIteratorIterator($phar);
+        $result=array();
+        /** @var $f PharFileInfo */
+        foreach($iterator  as  $f) if (preg_match($mask,$f)){
+           // echo ' found '.$f."\n";
+            $result[]=$f;
+        }
+        return $result;
+    }
+
+    private static function _relist(&$curr,&$result,$path){
+        foreach($curr as $x=>&$y){
+            if(!is_array($y))
+                $result[]=$path.'|'.$x;
+            else
+                UTILS::_relist($y,$result,$path.'|'.$x);
+        }
+    }
+
+    static function getallheaders(){
+        if (function_exists('getallheaders')){
+            return getallheaders();
+        } else {
+            $headers = array();
+            foreach ($_SERVER as $name => $value)
+            {
+                if (substr($name, 0, 5) == 'HTTP_')
+                {
+                    $headers[str_replace(' ', '-', ucwords(strtolower(str_replace('_', ' ', substr($name, 5)))))] = $value;
+                }
+            }
+            return $headers;
+        }
+    }
+
+    static function uploadedFiles(){
+        $uploaded=array();
+        $paths=array();
+
+        foreach($_FILES as $x=>$y){
+            if(!empty($_FILES[$x]['name'])){
+                UTILS::_relist($_FILES[$x]['name'],$paths,$x.'|{{}}');
+            }
+        }
+        foreach($paths as $p){
+            $uploaded[]=array(
+                'name'=>UTILS::val($_FILES,str_replace('{{}}','name',$p),'x'),
+                'error'=>UTILS::val($_FILES,str_replace('{{}}','error',$p),'x'),
+                'tmp_name'=>UTILS::val($_FILES,str_replace('{{}}','tmp_name',$p),'x'),
+                'path'=>$p
+            );
+        }
+        return $uploaded;
+    }
+
+    /**
+     * convert simple DOS|LIKE mask with * and ? into regular expression
+     * so
+     *   * - all files - its'a a difference with the rest "select by mask"
+     *   *.xml - all files with xlm extension
+     *   *.jpg|*.jpeg|*.png -
+     *   hello*world?.txt - helloworld1.txt,helloXXXworld2.txt, and so on
+     *
+     * @param $mask - simple mask
+     * @param bool $last - mask ends with last simbol
+     * @param bool $isfilemask - is this mask used to filter filenames?
+     * @return string
+     */
+    static function masktoreg($mask, $last = true, $isfilemask = true)
+    {
+        if (!empty($mask) && $mask{0} == '/') return $mask; // это уже регулярка
+        if($isfilemask){
+            $star='[^:/\\\\\\\\]';//
+            $mask=explode('|',$mask);
+        } else {
+            $star='.';//
+            $mask=array($mask);
+        }
+        /* so create mask */
+        $regs = array(
+            '~\[~' => '@@0@@',
+            '~\]~' => '@@1@@',
+            '~[\\\\/]~' => '@@2@@',
+            '/\*\*+/' => '@@3@@',
+            '/\./' => '\.',
+            '/\|/' => '\|',
+            '/\*/' => $star . '*',
+            '/\?/' => $star,
+            '/#/' => '\#',
+            '/@@3@@/' => '.*',
+            '/@@2@@/' => '[\/\\\\\\\\]',
+            '/@@1@@/' => '\]',
+            '/@@0@@/' => '\[',
+        );
+        $r=array();
+        foreach($mask as $m)
+            $r[]=preg_replace(
+                    array_keys($regs), array_values($regs), $m
+                ) . ($last ? '$' : '');
+        return '#' . implode('|',$r). '#iu';
+    }
+
+    static function val($rec,$disp,$default=''){
+        $x=explode('|',$disp);
+        $v=$rec;
+        foreach($x as $xx){
+            if(is_object($v)){
+                if(property_exists($v,$xx)){
+                    $v=$v->$xx;
+                } else {
+                    $v=$default;
+                    break;
+                }
+            } elseif(isset($v[$xx])){
+                $v=$v[$xx];
+            } else {
+                $v=$default;
+                break;
+            }
+        }
+        return $v;
+    }
+
 }

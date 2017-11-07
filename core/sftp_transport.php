@@ -31,9 +31,9 @@ class sftp_transport {
         return $this->net_ftp;
     }
 
-    function scan(){
+    function scan($dir=''){
         $sftp=$this->get_net_ftp();
-        return $sftp->rawlist($this->options['root']);
+        return $sftp->rawlist($this->options['root'].$dir);
     }
 
     /**
@@ -46,7 +46,7 @@ class sftp_transport {
         $sftp=$this->get_net_ftp();
 
 // puts a three-byte file named filename.remote on the SFTP server
-        if(NET_SFTP_LOCAL_FILE){
+        if($is_filename){
             $sftp->put($this->options['root'].$destination,$contents, NET_SFTP_LOCAL_FILE);
         } else {
             $sftp->put($this->options['root'].$destination, $contents);

@@ -187,7 +187,7 @@ class xDatabase_parent
     protected $debug = array();
     protected $once_options = array();
 
-    protected $_prefix='xsite';
+    public $_prefix='xsite';
     /**
      * @var bool - флаг - нужно ли инициализироваться на старте.
      * Устанавливать соединение и т.д.
@@ -956,11 +956,13 @@ class xSphinxDB extends xDatabaseLapsii
 
     function __construct($option = '')
     {
+        $this->_host='127.0.0.1';
+        $this->_port = 9306;
         xDatabase::__construct($option);
         $this->db_link = @mysqli_connect(
             $this->_host,
-            $this->_user,
-            $this->_password,
+            '',
+            '',
             '',
             $this->_port
         );
@@ -969,8 +971,6 @@ class xSphinxDB extends xDatabaseLapsii
                 'can\'t connect: (' . mysqli_connect_errno() . ') '
                 . mysqli_connect_error() . "\n" .
                 $this->_host . "\n" .
-                $this->_user . "\n" .
-                $this->_password . "\n" .
                 $this->_port
             );
         }

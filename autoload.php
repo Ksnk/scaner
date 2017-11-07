@@ -5,11 +5,25 @@
  */
 class Autoload
 {
-    var $dir = array();
+    private $dir = array();
+
+    private static
+        $map = array(),
+        $index = '';
+
+    static function map($array)
+    {
+        self::$map = array_merge($array, self::$map);
+    }
 
     static function register($dir)
     {
         static $loader;
+        if (defined('INDEX_DIR')) {
+            self::$index = INDEX_DIR;
+        } else {
+            self::$index = dirname(__FILE__);
+        }
         if (empty($loader)) {
             $loader = new self();
             if (PHP_VERSION < 50300) {
@@ -20,25 +34,29 @@ class Autoload
         }
 
         if (!is_array($dir)) $dir = array($dir);
-        foreach ($dir as $d) {
-            $loader->dir = array_unique(array_merge($loader->dir, explode(';', $d)));
-        }
+        foreach ($dir as $dd)
+            foreach (explode(';', $dd) as $d) {
+                $loader->dir[] = str_replace('~', self::$index, $d);
+            }
+        $loader->dir = array_unique($loader->dir);
     }
 
     public function __invoke($classname)
     {
-       foreach ($this->dir as $d) {
-           $filename = $d . '/' . str_replace('\\', '/', $classname) . '.php';
-           if (!file_exists($filename)) {
-                // echo('!exists '.$filename."\n");
-               continue;
-           }
-           require_once($filename);
-           return true;
+        $classname = strtr($classname, self::$map);
+
+        foreach ($this->dir as $d) {
+
+            $filename = $d . '/' . str_replace('\\', '/', $classname) . '.php';
+            if (!file_exists($filename)) {
+                continue;
+            }
+            require_once($filename);
+            return true;
         }
-        echo($classname.' '.getcwd().' '.json_encode($this->dir)."\n");
+        //echo($classname . ' ' . getcwd() . ' ' . json_encode($this->dir) . "\n");
         return false;
     }
 }
 
-Autoload::register(array(dirname(__FILE__).'/core',dirname(__FILE__)));
+Autoload::register(array('~/core', '~/libs', '~'));

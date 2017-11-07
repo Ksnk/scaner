@@ -14,7 +14,7 @@ class scaner
 
 
     /** @var string */
-    private $buf;
+    protected $buf;
 
     /** @var string */
     private $tail='';
@@ -160,6 +160,10 @@ class scaner
         return $this;
     }
 
+    function getpos(){
+        return $this->filestart+$this->start;
+    }
+
     /**
      * установить курсор чтения в позицию $pos
      * @param $pos
@@ -257,6 +261,20 @@ class scaner
     }
 
     /**
+     * в случае неудачи возвращает указатель на начало
+     * @return $this
+     */
+    function ifscan()
+    {
+        $pos=$this->getpos();
+        $arg = func_get_args();
+        call_user_func_array(array($this, 'scan'), $arg);
+        if(!$this->found){
+            $this->position($pos);
+        }
+        return $this;
+    }
+    /**
      * Получить строку, вокруг позиции Start
      */
     function getline(){
@@ -300,9 +318,15 @@ class scaner
     function doscan($reg)
     {
         $arg = func_get_args();
+        $old=$this->getResult();
+        $r=array();
         do {
             call_user_func_array(array($this, 'scan'), $arg);
+            if($this->found)
+                $r[]=$this->getResult();
         } while ($this->found);
+        $this->result=$old;
+        $this->result['doscan']=$r;
         $this->till = -1;
         return $this;
     }

@@ -65,6 +65,7 @@ Windows NT 5.1; ru; rv:1.8.0.9) Gecko/20061206 Firefox/1.5.0.9';
         curl_setopt($ch, CURLOPT_TIMEOUT, 10); // times out after 4s
 
         curl_setopt($ch, CURLOPT_BINARYTRANSFER, 1);
+        curl_setopt($ch,CURLOPT_SSL_VERIFYPEER, false);
 
 
         $x = curl_exec($ch);
