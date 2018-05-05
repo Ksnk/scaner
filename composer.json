@@ -1,0 +1,30 @@
+{
+    "name": "ksnk/scaner",
+    "type": "library",
+    "description": "Scaner is a PHP client library",
+    "keywords": ["framework", "client"],
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Serge Koriakin",
+            "email": "sergekoriakin@gmail.com",
+            "homepage": "https://github.com/ksnk"
+        }
+    ],
+    "require": {
+        "php": ">=7.1"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^4.8.35 || ^5.7 || ^6.4 || ^7.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Ksnk\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Ksnk\\Tests\\": "tests/"
+        }
+    }
+}
