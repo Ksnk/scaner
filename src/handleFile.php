@@ -12,7 +12,7 @@ namespace Ksnk;
  * Class fileHandle - класс - файловый хендл для
  * @package Ksnk
  */
-class fileHandle extends stringHandle
+class handleFile extends handleString
 {
     /**
      * Читаем и дочитываем из файла вот такими кусками

@@ -22,7 +22,7 @@ class scaner
     /** @var boolean - результат операции поиска */
     var $found = false;
 
-    /** @var stringHandle */
+    /** @var handleString */
     private $_handle = null;
 
     /** @var integer */
@@ -50,7 +50,7 @@ class scaner
      */
     function newbuf($buf)
     {
-        $this->_handle = new stringHandle($buf);
+        $this->_handle = new handleString($buf);
         $this->result = array();
         return $this;
     }
@@ -65,9 +65,9 @@ class scaner
 
         if (is_string($handle)) {
             if (preg_match('/\.gz$/', $handle)) {
-                $this->_handle = new fileGZHandle($handle);
+                $this->_handle = new handleGZfile($handle);
             } else {
-                $this->_handle = new fileHandle($handle);
+                $this->_handle = new handleFile($handle);
             }
         } else
             $this->_handle = $handle; // tod: а вот оно надо или нет?

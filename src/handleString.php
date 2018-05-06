@@ -9,7 +9,7 @@
 namespace Ksnk;
 
 
-class stringHandle
+class handleString
 {
 
     // буфер для хранения строки

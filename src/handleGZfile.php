@@ -9,7 +9,7 @@
 namespace Ksnk;
 
 
-class fileGZHandle extends fileHandle
+class handleGZfile extends handleFile
 {
 
     public function __construct($handle)
