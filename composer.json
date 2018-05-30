@@ -27,5 +27,13 @@
         "psr-4": {
             "Ksnk\\Tests\\": "tests/"
         }
+    },
+    "suggest": {
+        "psr/log": "Required for using the Log middleware"
+    },
+    "extra": {
+        "branch-alias": {
+            "dev-master": "1.0-dev"
+        }
     }
 }
