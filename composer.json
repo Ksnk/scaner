@@ -1,6 +1,5 @@
 {
     "name": "ksnk/scaner",
-    "version": "1.0.0",
     "type": "library",
     "description": "Scaner is a PHP client library",
     "keywords": ["framework", "client"],
@@ -30,10 +29,5 @@
     },
     "suggest": {
         "psr/log": "Required for using the Log middleware"
-    },
-    "extra": {
-        "branch-alias": {
-            "dev-master": "1.0-dev"
-        }
     }
 }
