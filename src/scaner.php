@@ -1,6 +1,6 @@
 <?php
 
-namespace Ksnk;
+namespace Ksnk\scaner;
 
 /**
  * простой сканер разнобольших текстовых файлов, можно в гнузипе
