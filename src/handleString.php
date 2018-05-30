@@ -29,7 +29,8 @@ class handleString
 
     var $finish = 0;
 
-    public function __construct($buf=''){
+    public function __construct($buf = '')
+    {
         if (is_array($buf)) { // is it source from `file` function
             $buf = implode("\n", $buf);
         }
@@ -41,7 +42,8 @@ class handleString
 
     }
 
-    public function outofrange($pos){
+    public function outofrange($pos)
+    {
         if ($this->till <= 0 || $this->finish < $this->till)
             $till = $this->finish;
         else
@@ -51,11 +53,12 @@ class handleString
         return false;
     }
 
-    public function pos($pos=null) {
-        if(is_null($pos))
+    public function pos($pos = null)
+    {
+        if (is_null($pos))
             return $this->start;
-        else if($pos==='till')
-            $this->pos($this->till);
+        else if ($pos === 'till')
+            $this->pos($this->till == -1 ? $this->finish : $this->till);
         else
             $this->start = $pos;
         return true;
@@ -65,7 +68,8 @@ class handleString
      * All file readed completelly?
      * @return bool
      */
-    public function feof() {
+    public function feof()
+    {
         return true;
     }
 

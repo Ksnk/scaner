@@ -23,7 +23,7 @@ class scaner
     var $found = false;
 
     /** @var handleString */
-    private $_handle = null;
+    public $_handle = null;
 
     /** @var integer */
     private
@@ -150,11 +150,11 @@ class scaner
             if ($reg{0} == '/' || $reg{0} == '~') { // so it's a regular expresion
                 $res = preg_match($reg, $this->_handle->buf, $m, PREG_OFFSET_CAPTURE, $this->_handle->start);
                 if ($res) {
-                    if ($this->_handle->outofrange( $m[0][1] + strlen($m[0][0]))) {
+                    if ($this->_handle->outofrange($m[0][1] + strlen($m[0][0]))) {
                         $this->found = false;
                         break;
                     } else {
-                        $this->result['_regstart']=$this->_handle->filestart + $m[0][1];
+                        $this->result['_regstart'] = $this->_handle->filestart + $m[0][1];
                         $this->found = true;
                         $this->_handle->start = $m[0][1] + strlen($m[0][0]);
                         foreach ($args as $x => $name) {
@@ -170,7 +170,7 @@ class scaner
             } else { // it's a plain text
                 $y = stripos($this->_handle->buf, trim($reg), $this->_handle->start);
                 if (false !== $y) {
-                    if ($this->_handle->outofrange( $y + strlen($reg))) {
+                    if ($this->_handle->outofrange($y + strlen($reg))) {
                         $this->position('till');
                         break;
                     }
@@ -185,7 +185,7 @@ class scaner
                     $this->result[] = substr($this->_handle->buf, $xx, $this->_handle->start - $xx);
                 }
             }
-            if (!$this->found && $this->_handle->movetolastline()){
+            if (!$this->found && $this->_handle->movetolastline()) {
                 continue;
             } else {
                 break;
@@ -244,7 +244,7 @@ class scaner
         $this->scan($reg);
 
         if ($this->found) {
-            $this->_handle->till = $this->result['_regstart'] + 1;
+            $this->_handle->till = $this->result['_regstart'] ;
             $this->position($oldstart);
         }
         $this->found = $f;
@@ -299,7 +299,7 @@ class scaner
         }
         $this->_handle->prepare(false);
         while (preg_match($pattern, $this->_handle->buf, $m, PREG_OFFSET_CAPTURE, $this->_handle->start)) {
-            if ($this->_handle->outofrange( $m[0][1] + strlen($m[0][0]) )) {
+            if ($this->_handle->outofrange($m[0][1] + strlen($m[0][0]))) {
                 break;
             }
             $skiped = substr($this->_handle->buf, $this->_handle->start, $m[0][1] - $this->_handle->start);

@@ -69,9 +69,10 @@ class handleFile extends handleString
         if (!empty($this->handle)) {
             if (!feof($this->handle)) {
                 if ($this->start >= strlen($this->buf)) {
+                    $this->start = strlen($this->buf);
                     $this->buf = $this->tail;
                 } else
-                    $this->buf = substr($this->buf, $this->start + 1) . $this->tail;
+                    $this->buf = substr($this->buf, $this->start /*+ 1*/) . $this->tail;
                 $this->buf .= fread($this->handle, self::BUFSIZE);
                 $this->tail = '';
                 if (!feof($this->handle)) {
