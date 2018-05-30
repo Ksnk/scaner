@@ -131,7 +131,7 @@ ship "Kar Ik Vot 349"
 	system Sevrelect
 	planet "Setar Fort"
 PTRN0;
-        $scaner = new Ksnk\scaner();
+        $scaner = new Ksnk\scaner\scaner();
         $yaml = new _yaml();
         $scaner
             ->newbuf($xxx)
