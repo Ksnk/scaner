@@ -1,6 +1,6 @@
 <?php
 
-namespace Ksnk;
+namespace Ksnk\scaner;
 
 /**
  * Запуск консольных команд и аналииз получившегося результата.

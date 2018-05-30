@@ -6,7 +6,7 @@
  * Time: 2:31
  */
 
-namespace Ksnk;
+namespace Ksnk\scaner;
 
 
 class handleGZfile extends handleFile

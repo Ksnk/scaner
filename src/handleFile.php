@@ -6,7 +6,7 @@
  * Time: 22:14
  */
 
-namespace Ksnk;
+namespace Ksnk\scaner;
 
 /**
  * Class fileHandle - класс - файловый хендл для

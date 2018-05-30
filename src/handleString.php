@@ -6,7 +6,7 @@
  * Time: 23:57
  */
 
-namespace Ksnk;
+namespace Ksnk\scaner;
 
 
 class handleString
