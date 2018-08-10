@@ -2,19 +2,35 @@
 
 /**
  * простой сканер разнобольших текстовых файлов, можно в гнузипе
- * Предназначен как родитель для транспортных классов - spider/mailer
+ * Используется как родитель для транспортных классов - spider/mailer
  * так и для сольного использования - анализ логов.
+ *
+ * Читает файл в буфер. Анализ файла идет регулярками. когда "курсор" чтения
+ * доходит до граница прочитанного буфера - файл дочитывается, буфер смещается.
+ * Базовый сервис сканироввания с помощью регулярок и рудиментарно-простой синтаксиеский анализ
+ *
  * Class scaner
  */
 class scaner
 {
 
-    const MAX_BUFSIZE=60000; // максимальный размер буфера чтения
-    const MIN_BUFSIZE=30000; // минимальный размер строки буфера.
+    /**
+     * Читаем и дочитываем из файла вот такими кусками
+     */
+    const BUFSIZE=40000; // максимальный размер буфера чтения
+
+    /**
+     * Гарантируем такое пространство от курсора чтения до конца буфера.
+     * Фактически - ограничение сверху на длину строки
+     */
+    const GUARD_STRLEN=4096;
 
 
     /** @var string */
     protected $buf;
+
+    /** @var int - позиция начала совпадения регулярки для функции scan */
+    public $reg_begin;
 
     /** @var string */
     private $tail='';
@@ -56,6 +72,9 @@ class scaner
      */
     function newbuf($buf)
     {
+        if(is_array($buf)){ // source from `file` function
+            $buf=implode("\n",$buf);
+        }
         $this->buf = $buf; // run the new scan
         $this->start = 0;
         $this->finish=strlen($buf);
@@ -103,38 +122,41 @@ class scaner
         $this->start = 0;
         $this->till = -1;
         $this->filestart = 0;
+        $this->buf='';
         $this->result = array();
         return $this;
     }
 
     /**
      * дочитываем буфер, если надо
+     * @param bool $force - проверять граничный размер
      * @return bool - последний ли это препаре или нет todo: непонятно накой такой результат нужен
      */
-    protected function prepare()
+    protected function prepare($force=true)
     {
-        if (!empty($this->handle)) {
-            //if ($this->start > strlen($this->buf) - 4096) {
-                if (!feof($this->handle)) {
-                    if($this->start>=strlen($this->buf)){
-                        $this->buf = $this->tail;
-                    } else
-                        $this->buf = substr($this->buf, $this->start+1).$this->tail ;
-                    $this->buf .= fread($this->handle, 40000);
-                    $this->tail='';
-                    if (!feof($this->handle)){
-                        $x = strrpos($this->buf, "\n");
-                        if(false!==$x){
-                        $this->tail=substr($this->buf,$x+1);
-                        $this->buf=substr($this->buf,0,$x);
-                        }
-                    }
+        if(!$force && strlen($this->buf)-self::GUARD_STRLEN>=$this->start)
+            return false;
 
-                    $this->filestart += $this->start;
-                    $this->start = 0;
-                    return true;
+        if (!empty($this->handle)) {
+            if (!feof($this->handle)) {
+                if($this->start>=strlen($this->buf)){
+                    $this->buf = $this->tail;
+                } else
+                    $this->buf = substr($this->buf, $this->start+1).$this->tail ;
+                $this->buf .= fread($this->handle, self::BUFSIZE);
+                $this->tail='';
+                if (!feof($this->handle)){
+                    $x = strrpos($this->buf, "\n");
+                    if(false!==$x){
+                    $this->tail=substr($this->buf,$x+1);
+                    $this->buf=substr($this->buf,0,$x);
+                    }
                 }
-            //}
+
+                $this->filestart += $this->start;
+                $this->start = 0;
+                return true;
+            }
         }
         return false;
     }
@@ -145,21 +167,36 @@ class scaner
     function line(){
         $this->found = true;
         $move=false;
-        if(strlen($this->buf)>=$this->start || strlen($this->buf)-4096>$this->start)
-            $move=$this->prepare();
-        $x = strpos($this->buf, "\n",$this->start);
-        if (strlen($this->buf)>=$this->start && !$move) {
+        $this->prepare(false);
+        if (strlen($this->buf)<=$this->start && !$move) {
             $this->found = false;
-        } elseif (false === $x) {
+            return $this;
+        }
+
+        $x = strpos($this->buf, "\n",$this->start);
+
+        if (false === $x) {
             $this->result[]=substr($this->buf,$this->start);
             $this->start = strlen($this->buf);
         } else {
-            $this->result[]=substr($this->buf,$this->start,$x-$this->start);
-            $this->start = $x;
+            if($this->till<=0 || $this->finish<$this->till)
+                $till=$this->finish;
+            else
+                $till=$this->till;
+            if ( $this->filestart+$x+1 > $till) {
+                $this->found = false;
+            } else {
+                $this->result[] = substr($this->buf, $this->start, $x - $this->start);
+                $this->start = $x + 1;
+            }
         }
         return $this;
     }
 
+    /**
+     * Позиция курсора в файле
+     * @return int
+     */
     function getpos(){
         return $this->filestart+$this->start;
     }
@@ -193,8 +230,7 @@ class scaner
      */
     function scan($reg)
     {
-        if(strlen($this->buf)-4096<$this->start)
-            $this->prepare();
+        $this->prepare(false);
 
         do {
             $this->found = false;
@@ -202,11 +238,16 @@ class scaner
             if ($reg{0} == '/' || $reg{0} == '~') { // so it's a regular expresion
                 $res = preg_match($reg, $this->buf, $m, PREG_OFFSET_CAPTURE, $this->start);
                 if ($res) {
-                    $this->found = true;
-                    if ($this->till > 0 && $this->filestart+$m[0][1] + strlen($m[0][0]) > $this->till) {
+                    if($this->till<=0 || $this->finish<$this->till)
+                        $till=$this->finish;
+                    else
+                        $till=$this->till;
+                    if ( $this->filestart+$m[0][1] + strlen($m[0][0]) > $till) {
                         $this->found = false;
                         break;
                     } else {
+                        $this->reg_begin=$this->filestart+$m[0][1];
+                        $this->found = true;
                         $this->start = $m[0][1] + strlen($m[0][0]);
                         $args = func_get_args();
                         array_shift($args);
@@ -303,7 +344,7 @@ class scaner
         $this->scan($reg);
 
         if($this->found){
-            $this->till = $this->filestart+$this->start;
+            $this->till = $this->reg_begin;//'$this->filestart+$this->start;
             $this->position($oldstart);
         }
         $this->found=$f;$this->result=$res;
@@ -329,6 +370,52 @@ class scaner
         $this->result['doscan']=$r;
         $this->till = -1;
         return $this;
+    }
+
+    function getbuf(){
+        return $this->buf;
+    }
+
+    /**
+     * syntax parsing
+     * @param $tokens
+     * @param $pattern
+     * @param $callback
+     */
+    function syntax($tokens,$pattern,$callback){
+        // so build a reg
+        $idx=array(0);
+        while(preg_match('/:(\w+):/',$pattern,$m,PREG_OFFSET_CAPTURE)){
+            if(!isset($tokens[$m[1][0]])) break;
+            $idx[]=$m[1][0];
+            if(is_string($tokens[$m[1][0]]))$tokens[$m[1][0]]=array($tokens[$m[1][0]]);
+            $pattern=
+                substr($pattern,0,$m[0][1]).
+                '('.implode('|',$tokens[$m[1][0]]).')'.
+                substr($pattern, $m[0][1]+strlen($m[0][0]));
+        }
+        if($this->till<0){
+            $till=$this->finish;
+        } else {
+            $till=$this->till;
+        }
+        $this->prepare(false);
+        while( preg_match($pattern, $this->buf, $m, PREG_OFFSET_CAPTURE, $this->start)) {
+            if($this->filestart+$m[0][1]+strlen($m[0][0])>$till) {
+                break;
+            }
+            $skiped=substr($this->buf,$this->start,$m[0][1]-$this->start);
+            $this->start=$m[0][1]+strlen($m[0][0]);
+            $r = array('_skiped'=>trim($skiped));
+            foreach ($idx as $i => $v) {
+                if (isset($m[$i]) && !empty($i)) {
+                    $r[$idx[$i]] = trim($m[$i][0],"\n\r ");
+                }
+            }
+            if(false===$callback($r)) break;
+            $this->prepare(false);
+        }
+        $this->position($till);
     }
 
 }

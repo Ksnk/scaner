@@ -104,6 +104,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         if(!empty($action)){
             $top = array('class' => $class, 'method' => $method, 'dir' => realpath(UTILS::val($_POST[$action],'_')));
         //var_dump($action);//var_dump($top['dir']);
+        //if($class=='braindesign_scan_scenario')
         $res = x_parser::getParameters('', $class, $top['dir']);
         $param = array();
         foreach ($res[$class][$method]['param'] as $name => $par) {
@@ -228,9 +229,19 @@ if(!empty($filter)){
 
 $data = array();
 $scenariofiles = glob('../scenario/*/*_scenario.php');
+$tag='unknown';
+if(!empty($_GET['tag'])){
+    $tag=$_GET['tag'];
+}
+
 foreach ($scenariofiles as $sc) {
     $classname = basename($sc, '.php');
     $res = x_parser::getParameters('', $classname, realpath($sc));
+    //var_export($tag);
+    if(!in_array($tag,$res['tags'])){
+       // var_export($res['tags']);
+        continue;
+    }
     if (empty($res) || empty($res[$classname]) || !preg_match($filter,$classname)) {
         //ENGINE::debug($filter,$res);
         continue;

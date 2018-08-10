@@ -231,7 +231,13 @@ class x_parser {
         $class = self::reflect($class_name);
         $action = new $class_name();
         $result=array();
-
+        $doccomment=$class->getDocComment();
+        if(preg_match('/@tags\s+(.*?)\s+$/m',$doccomment,$m)) {
+            $result['tags'] = explode(',', $m[1]);
+        } else {
+            $result['tags'] = array('unknown');
+        }
+        //$result['_doc_comment']=$class->getDocComment();
         if(empty($method)) $methods=$class->getMethods(  );
         else $methods=array($class->getMethod( $method ));
 

@@ -42,13 +42,12 @@ class spider extends scaner
             curl_setopt($ch, CURLOPT_STDERR, $verbose);
         }
 
-        $user_agent = 'Mozilla/5.0 (Windows; U;
-Windows NT 5.1; ru; rv:1.8.0.9) Gecko/20061206 Firefox/1.5.0.9';
+        $user_agent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/67.0.3396.99 Safari/537.36';
         $header = array(
-            "Accept: text/xml,application/xml,application/xhtml+xml,
-    text/html;q=0.9,text/plain;q=0.8,image/png,*/*;q=0.5",
-            "Accept-Language: ru-ru,ru;q=0.7,en-us;q=0.5,en;q=0.3",
-            "Accept-Charset: windows-1251,utf-8;q=0.7,*;q=0.7",
+            "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8",
+            "Accept-Encoding: gzip, deflate",
+            "Accept-Language: ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7",
+            "Upgrade-Insecure-Requests: 1",
  //           "Keep-Alive: 300"
         );
 
@@ -57,6 +56,7 @@ Windows NT 5.1; ru; rv:1.8.0.9) Gecko/20061206 Firefox/1.5.0.9';
         curl_setopt($ch, CURLOPT_COOKIEJAR, $this->cookie_file);
         curl_setopt($ch, CURLOPT_COOKIEFILE, $this->cookie_file);
         curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1); // allow redirects
+        curl_setopt($ch, CURLOPT_ENCODING, 'gzip');
         //curl_setopt($ch, CURLOPT_HTTP_VERSION,'1.0');
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1); // return into a variable
         curl_setopt($ch, CURLOPT_HEADER, 0);
@@ -65,7 +65,7 @@ Windows NT 5.1; ru; rv:1.8.0.9) Gecko/20061206 Firefox/1.5.0.9';
         curl_setopt($ch, CURLOPT_TIMEOUT, 10); // times out after 4s
 
         curl_setopt($ch, CURLOPT_BINARYTRANSFER, 1);
-        curl_setopt($ch,CURLOPT_SSL_VERIFYPEER, false);
+       // curl_setopt($ch,CURLOPT_SSL_VERIFYPEER, false);
 
 
         $x = curl_exec($ch);
@@ -73,12 +73,19 @@ Windows NT 5.1; ru; rv:1.8.0.9) Gecko/20061206 Firefox/1.5.0.9';
             rewind($verbose);
             echo stream_get_contents($verbose);
         }
+        $info = curl_getinfo($ch);
+       // print_r($info);
         if (false === $x) {
             echo 'Ошибка curl: ' . curl_error($ch);
             $this->newbuf(''); // run the whole process
         } else {
+            $content_type=$info['content_type'];
+            if(preg_match('/charset=\s*(.+)\s*/', $content_type, $found)){
+                $p = trim($found[1]);
+                if($p != 'utf-8' && $p != 'UTF-8') $x = mb_convert_encoding($x,'UTF-8',$p);
+            };
             $this->newbuf($x); // run the whole process
-            $x = $this->buildurl(curl_getinfo($ch, CURLINFO_EFFECTIVE_URL), true);
+            $x = $this->buildurl($info['url'], true);
             if ($x != $this->siteroot) {
                 echo '=>' . $x;
             } else {
@@ -92,7 +99,6 @@ Windows NT 5.1; ru; rv:1.8.0.9) Gecko/20061206 Firefox/1.5.0.9';
 
         if ($this->debug) {
             $version = curl_version();
-            $info = curl_getinfo($ch);
             printf('
 date: %s
 %s

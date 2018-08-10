@@ -10,6 +10,23 @@ class UTILS {
     
     static $months_rp=array('Января','Февраля','Марта','Апреля','Мая','Июня','Июля','Августа','Сентября','Октября','Ноября','Декабря');
 
+    static  function translit($text)
+{
+    $ar_latin=array('a', 'b', 'v', 'g', 'd', 'e', 'jo', 'zh', 'z', 'i', 'j', 'k',
+        'l', 'm', 'n', 'o', 'p', 'r', 's', 't', 'u', 'f', 'h', 'c', 'ch', 'sh', 'shh',
+        '', 'y', '', 'je', 'ju', 'ja', 'je', 'i');
+    $text = trim(str_replace(array('а', 'б', 'в', 'г', 'д', 'е', 'ё', 'ж', 'з', 'и', 'й', 'к',
+            'л', 'м', 'н', 'о', 'п', 'р', 'с', 'т', 'у', 'ф', 'х', 'ц', 'ч', 'ш', 'щ',
+            'ъ', 'ы', 'ь', 'э', 'ю', 'я', 'є', 'ї'),
+        $ar_latin, $text));
+    $text = trim(str_replace(array('А', 'Б', 'В', 'Г', 'Д', 'Е', 'Ё', 'Ж', 'З', 'И', 'Й', 'К',
+            'Л', 'М', 'Н', 'О', 'П', 'Р', 'С', 'Т', 'У', 'Ф', 'Х', 'Ц', 'Ч', 'Ш', 'Щ',
+            'Ъ', 'Ы', 'Ь', 'Э', 'Ю', 'Я', 'Є', 'Ї')
+        , $ar_latin, $text));
+    return $text;
+}
+
+
     static function detectUTF8 ($string){
         return preg_match('%(?:
        [\xC2-\xDF][\x80-\xBF]        		# non-overlong 2-byte
@@ -214,6 +231,39 @@ class UTILS {
             }
         }
         return $v;
+    }
+
+    /**
+     * the future is come... sure...
+     * Scaning direcory by mask + call callback then found
+     * @param array $dirs
+     * @param callable|null $callback
+     * @return array
+     */
+    static function findFiles($dirs,$callback=null){
+        $result=array();
+        foreach($dirs as $dir){
+            $mask=UTILS::masktoreg($dir);
+            list($ddir,$rest)=preg_split('~[^/]*[\*\?]~',$dir,2);
+            $iterator = new RecursiveIteratorIterator(
+                new RecursiveDirectoryIterator($ddir), RecursiveIteratorIterator::CHILD_FIRST
+            );
+            /** @var \SplFileInfo $path */
+            foreach ($iterator as $path) {
+                if ($path->isFile() && preg_match($mask,$path->getPathname())) {
+                    $name=str_replace("\\",'/',
+                        str_replace(dirname(__FILE__).DIRECTORY_SEPARATOR , '', $path->getPathname()));
+                    $res=1;
+                    if(!is_null($callback)) $res=$callback($name);
+                    if($res===false){
+                        break 2;
+                    } else if($res){
+                        $result[$name];
+                    }
+                }
+            }
+        }
+        return $result;
     }
 
 }

@@ -5,7 +5,7 @@
  * Date: 06.08.2018
  * Time: 14:09
  */
-include_once '../../autoload.php';
+//include_once '../../autoload.php';
 
 class rmsp_csv_scenario extends scenario {
 

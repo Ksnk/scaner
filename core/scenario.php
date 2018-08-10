@@ -4,6 +4,7 @@
 class scenario extends base {
     /**
      * @var joblist
+     * @property scaner scaner
      */
     var $joblist;
 

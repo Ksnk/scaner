@@ -6,6 +6,8 @@
  * Time: 21:01
  */
 
+include_once 'd:/projects/rfbr/vendor/autoload.php';
+
 class x_parserTest extends PHPUnit_Framework_TestCase {
 
     function testClassExists(){
