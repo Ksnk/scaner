@@ -1,22 +1,13 @@
 $(function () {
 
+    if(typeof(DropPlus)=='undefined')DropPlus={};
     DropPlus = $.extend({
         maxpicture: 50000,
         maxfile: 50000,
         hugefile: 2000000,
         maxwidth: 1024,
-        maxheight: 1024,
-        debug: false
-    }, {});
-
-
-    /**
-     * function to make a deal with info about uploaded files
-     */
-    function ajax_handle(data) {
-        console.log('handle :',data);
-//        $('#uploads ul').append('<li>' + data.name + '</li>');
-    }
+        maxheight: 1024
+    }, DropPlus||{});
 
     var cs = {
         /**
@@ -27,7 +18,12 @@ $(function () {
         hugefile:DropPlus.hugefile,
         maxwidth: DropPlus.maxwidth,
         maxheight: DropPlus.maxheight,
-        debug: DropPlus.debug,
+        debug: DropPlus.debug||false,
+        oncomplete: DropPlus.oncomplete||function(){
+            var x=this.upload.attr('data-oncomplete');
+            if(this.result && x)return eval(x);
+        },
+        result:true,
 
         formData: false,
         upload: null, // $-ed input-type control
@@ -37,6 +33,10 @@ $(function () {
          *  pop, push, stack - some sort of "deferred" jQuery object but without jQuery.
          */
         executing: false,
+        ajax_handle: function(data) {
+            console.log('handle :',data);
+//        $('#uploads ul').append('<li>' + data.name + '</li>');
+        },
         push: function (par) {
             this.init();
             for (var i = par.length - 1, f; f = par[i]; i--)
@@ -248,7 +248,7 @@ $(function () {
                 } catch (e) {
                     data = {};
                 }
-                ajax_handle(data);
+                that.ajax_handle(data);
                 that.pop();
             };
             xhr.onprogress = function (evt) {

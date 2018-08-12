@@ -56,7 +56,7 @@ class evroset_scan_scenario extends scenario
                 ->scan("<h1>Результаты поиска</h1>")
                 ->doscan('~<a href=\'([^\']+)\' class=\'cLink\'~', 1);
             $result=$this->spider->getresult();
-            foreach ($result as $res) {
+            foreach ($result['doscan'] as $res) {
                 $this->joblist->append_scenario('scanitem', $res, $articul);
             }
         }
@@ -85,7 +85,7 @@ class evroset_scan_scenario extends scenario
             ->doscan('~<a href=\'(.*?)\'\s+class="itemFoto~is', 1);
         $result=$this->spider->getresult();
         $res['morefoto'] = implode("\r\n", $result);
-        foreach ($result as $i)
+        foreach ($result['doscan'] as $i)
             $this->joblist->append_scenario('upload_img', $i, $articul);
         $thisresult = array();
         $this->spider

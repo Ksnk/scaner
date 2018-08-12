@@ -10,6 +10,20 @@
  */
 class sqlfiddle_scenario extends scenario
 {
+
+    /**
+     * Тестировать
+     * @param string $a:radio[1:one|3:two|4:four|5:five] 1-й параметр
+     * @param $b
+     * @param int|string $c :select[one|3:two|4:four|five] 3-й параметр
+     */
+    function do_test($a,$b,$c=4)
+    {
+        $port = (__($_SERVER["SERVER_PORT"]) != '80' ? ':' . __($_SERVER["SERVER_PORT"]) : '');
+        echo 'http://' . __($_SERVER["HTTP_HOST"]) . __($_SERVER["REQUEST_URI"]);
+        printf("\n".'$a=`%s`,$b=`%s`,$c=`%s`, port=`%s`',$a,$b,$c,$port);
+    }
+
     /**
      *
      * Выполнение sql запросов, через ';'. a-la sqlfiddle

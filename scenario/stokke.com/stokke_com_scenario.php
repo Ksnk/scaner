@@ -55,6 +55,7 @@ class stokke_com_scenario extends scenario {
     /**
      * Загрузка файла на сайт стокке.ком в специальное место
      * @param $contents
+     * @param $contents
      * @param $name
      */
     function upload_file($contents,$name,$is_filename=false){
