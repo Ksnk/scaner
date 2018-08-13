@@ -260,11 +260,6 @@ while ($joblist->donext()) {;}
 $result = trim(ob_get_contents());
 ob_end_clean();
 
-$forms='';
-foreach ($data as $d) {
-    $forms.= x_parser::tpl($d, x_parser::$templates['_']);
-}
-
 Autoload::register(['~/libs/template','~/template']);
 
 template_compiler::checktpl(array(
@@ -275,12 +270,9 @@ template_compiler::checktpl(array(
 //    'FORCE'=>1 // для обязательной перекомпиляции щаблонов
 ));
 
-//ENGINE::debug($res['tags']);
-
 echo ENGINE::template('tpl_webclient','_',array(
     'result'=>$result,
     'data'=>$data,
-    'forms'=>$forms,
     'tags'=>array_unique($tags),
     'joblist'=>$joblist,
 ));

@@ -144,7 +144,7 @@
         </div>
         <div class="col-sm-6 col-lg-4 col-6" style="overflow:auto;">
             <form action="" method="POST" enctype="multipart/form-data">
-                {{ forms }}
+                {% for d in data  %}{{ form(d.method,d.sc,d.title,d.res) }}{% endfor %}
             </form>
         </div>
     </div>
@@ -238,3 +238,19 @@
 </script>
 </body>
 </html>
+
+{% macro form(method,sc,title,res) %}
+    <a name="{{ method }}"></a>
+    <div class="panel panel-primary" id="{{ method }}" style="display:none;">
+        <div class="panel-heading">
+            <span class="input-group-btn"><span class="input-group-btn">
+            <button class="input-sm form-control" type="submit" name="action" value="{{ method }}"><span
+                        class="glyphicon glyphicon-refresh" aria-hidden="true"></span></button></span>
+            <input type="hidden" name="{{ method }}[_]" value="{{ sc }}">
+            <h3 class="input-group-addon" style="color: white;background: none;border: none;">{{ title }}</h3>
+<a href="#" data-toggle="popover" title="Popover Header"
+   data-content="Some content inside the popover">Toggle popover</a></span>
+        </div>{% if res %}
+        <div class="panel-body">{{ res }}</div>{% endif %}
+    </div>
+{% endmacro %}
