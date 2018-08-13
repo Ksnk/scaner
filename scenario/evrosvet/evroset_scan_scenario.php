@@ -9,7 +9,7 @@
 /**
  * Работа с сайтом евросвет - авторизация и поиск товаров по артикулу.
  * Class evroset_scan_scenario
- * @tags market-sveta
+ *
  */
 class evroset_scan_scenario extends scenario
 {

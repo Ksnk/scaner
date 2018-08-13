@@ -7,6 +7,7 @@
 /**
  * Заменитель SQL-fiddle
  * Class sqlfiddle_scenario
+ * @tags fiddle
  */
 class sqlfiddle_scenario extends scenario
 {

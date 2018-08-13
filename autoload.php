@@ -54,7 +54,7 @@ class Autoload
             require_once($filename);
             return true;
         }
-        //echo($classname . ' ' . getcwd() . ' ' . json_encode($this->dir) . "\n");
+        echo($classname . ' ' . getcwd() . ' ' . json_encode($this->dir) . "\n");
         return false;
     }
 }

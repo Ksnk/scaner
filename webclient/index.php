@@ -7,6 +7,9 @@
  */
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
+
+define('INDEX_DIR',dirname(__DIR__));
+
 include_once "../autoload.php";
 
     define('TEMP_DIR','../temp/');
@@ -262,14 +265,14 @@ foreach ($data as $d) {
     $forms.= x_parser::tpl($d, x_parser::$templates['_']);
 }
 
-Autoload::register(['../lib/template','../template']);
+Autoload::register(['~/libs/template','~/template']);
 
 template_compiler::checktpl(array(
     'templates_dir'=> '../template/',
     'TEMPLATE_PATH'=> '../template/',
     'PHP_PATH'=> '../template/',
     'TEMPLATE_EXTENSION'=>'twig',
-//    'FORCE'=>1
+//    'FORCE'=>1 // для обязательной перекомпиляции щаблонов
 ));
 
 //ENGINE::debug($res['tags']);
