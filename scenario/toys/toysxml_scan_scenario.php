@@ -9,6 +9,7 @@
 /**
  * Работа с сайтом bragindesign.ru - сканирование всех товаров.
  * Class braindesign_scan_scenario
+ * @tags nastia
  */
 class toysxml_scan_scenario extends scenario
 {

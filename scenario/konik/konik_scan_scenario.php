@@ -9,6 +9,7 @@
 /**
  * Работа с сайтом konik.ru - сканирование всех товаров.
  * Class konik_scan_scenario
+ * @tags nastia
  */
 class konik_scan_scenario extends scenario
 {

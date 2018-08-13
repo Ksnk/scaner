@@ -4,6 +4,7 @@
  * User: Аня
  * Date: 04.02.16
  * Time: 16:24
+ * @tags debug
  */
 
 class jpegconvert_scenario {

@@ -61,7 +61,9 @@
 class monitoring_scenario extends scenario
 {
 
-    const reghtml = 'd:/projects/monitoring/monitoring.corpmsp.ru/webapps/StartPage/orgreg.html';
+    const reghtml =
+        //'d:/projects/monitoring/monitoring.corpmsp.ru/webapps/StartPage/orgreg.html';
+        '../data/monitoriing/orgress_tpp.html';
 
     /**
      * прочитать страницу с ID="xxx" и вывести информацию

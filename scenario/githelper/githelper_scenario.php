@@ -4,8 +4,8 @@
  * User: ksnk
  * Date: 08.11.17
  * Time: 10:03
+ * @tags git
  */
-
 class githelper_scenario {
 
     /**

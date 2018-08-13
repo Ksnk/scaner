@@ -9,6 +9,7 @@
 /**
  * конвертирование картинок с шершавым фоном.
  * Class convert_picture_scenario
+ * @tags market-sveta
  */
 class convert_picture_scenario extends scenario
 {
