@@ -8,6 +8,7 @@
  * Читалка длинных логов. Греп по IP.
  * Class grep_logs_scenario
  * @property scaner $scaner
+ * @tags lapsi
  */
 class grep_logs_scenario extends scenario
 {

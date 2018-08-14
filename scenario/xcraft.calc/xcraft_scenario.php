@@ -1,6 +1,7 @@
 <?php
 /**
  * Утилиты работы с xcraft статистикой
+ * @tags xcraft
  */
 class xcraft_scenario extends scenario {
 

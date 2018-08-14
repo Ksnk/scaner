@@ -9,6 +9,7 @@
 /**
  * загрузка файлов на стокке.ком и проверка наличия новых
  * Class sqlfiddle_scenario
+ * @tags lapsi
  */
 class stokke_com_scenario extends scenario {
 

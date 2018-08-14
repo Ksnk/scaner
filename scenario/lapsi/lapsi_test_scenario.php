@@ -2,6 +2,7 @@
 /**
  * набор сценариев отладки из утилит лапси
  * Class convert_picture_scenario
+ * @tags lapsi
  */
 class lapsi_test_scenario extends scenario
 {

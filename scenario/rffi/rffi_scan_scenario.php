@@ -9,6 +9,7 @@
 /**
  * Работа с сайтом http://www.rfbr.ru/rffi/ru/ - сканирование части разделов, книг и конкурсов
  * Class rffi_scan_scenario
+ * @tags rfbr
  */
 class rffi_scan_scenario extends scenario
 {

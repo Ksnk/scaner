@@ -2,6 +2,7 @@
 /**
  * Работа с сайтом на престашоп
  * Class prestashop_scenario
+ * @tags nastia
  */
 class prestashop_scenario extends scenario
 {

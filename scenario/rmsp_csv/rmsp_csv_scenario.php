@@ -4,6 +4,7 @@
  * User: s.koryakin
  * Date: 06.08.2018
  * Time: 14:09
+ * @tags msp
  */
 //include_once '../../autoload.php';
 

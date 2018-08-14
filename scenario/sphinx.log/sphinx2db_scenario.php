@@ -8,6 +8,7 @@
  * Читалка логов сфинкса, преобраование его в дамп-лог mySql
  * Class grep_logs_scenario
  * @property scaner $scaner
+ * @tags lapsi
  */
 class sphinx2db_scenario extends scenario
 {
