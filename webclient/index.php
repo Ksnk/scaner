@@ -224,7 +224,12 @@ foreach ($scenariofiles as $sc) {
     $classname = basename($sc, '.php');
     $res = x_parser::getParameters('', $classname, realpath($sc));
     //var_export($tag);
-    $tags = array_merge($tags, $res['tags']);
+    foreach ($res[$classname] as $method => $val) {
+        if (preg_match('/^do_(.*)$/', $method)) {
+            $tags = array_merge($tags, $res['tags']);
+            break;
+        }
+    }
     if(!in_array($tag,$res['tags'])){
        // var_export($res['tags']);
         continue;

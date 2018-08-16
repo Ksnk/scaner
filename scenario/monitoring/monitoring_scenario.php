@@ -61,6 +61,18 @@
 class monitoring_scenario extends scenario
 {
 
+    /**
+     * Тестируем класс фильторв
+     *
+     */
+    function do_testfilter($a='',$b='',$c=''){
+        include_once(__DIR__.'/filterClass.php');
+        $f=[];
+        foreach(['a','b','c'] as $n){if(''!=$$n)$f[$n]=$$n;}
+        $filter=new filterClass();
+        $filter->createConditions($f);
+    }
+
     const reghtml =
         //'d:/projects/monitoring/monitoring.corpmsp.ru/webapps/StartPage/orgreg.html';
         '../data/monitoriing/orgress_tpp.html';
