@@ -126,27 +126,22 @@ class filterClass
         return $this->conditions;
     }
 
+    public function filter($users,$alias=[]){
+        $this->make_distinct($users,$alias);
+        return $this->apply_filter($users,$alias);
+    }
+
     /**
      * фильтрация данных+ сборка информации для данных смарти
      * @param $users
+     * @param $alias - [filtername=>[type:{int|string|date}, sql: {newname|null}, ...]]
      * @return array
      */
-    public function filter($users,$alias=[])
+    public function apply_filter($users,$alias=[])
     {
         $conditions = $this->conditions;
         $that = $this;
         $user = array_filter($users, function ($val) use ($that, $conditions,$alias) {
-            foreach ($val as $k => $v) {
-                if(isset($alias[$k])) $k=$alias[$k];
-                if (!isset($that->distinct[$k])) $that->distinct[$k]['dis'] = array();
-                if (false === $that->distinct[$k]['dis']) continue;
-                if ('' !== trim($v))
-                    if (count($that->distinct[$k]['dis']) < $that->maxCount) {
-                        $that->distinct[$k]['dis'][trim($v)] = 1;
-                    } else {
-                        $that->distinct[$k]['dis'] = false;
-                    }
-            }
             if (!empty($conditions)) {
                 foreach ($conditions as $key => $cond) {
                     if(isset($alias[$key])) $key=$alias[$key];
@@ -186,11 +181,38 @@ class filterClass
             }
             return true;
         });
+        return $user;
+    }
+
+    /**
+     * фильтрация данных+ сборка информации для данных смарти
+     * @param $users
+     * @param $alias - [filtername=>[type:{int|string|date}, sql: {newname|null}, ...]]
+     */
+    public function make_distinct($users, $alias=[])
+    {
+        $that = $this;
+        array_map( function ($val) use ($that, $alias) {
+            foreach ($val as $k => $v) {
+                $kn=isset($alias[$k]) && !empty($alias[$k]['name'])
+                    ? $alias[$k]['name']
+                    : $k;
+                if (!isset($that->distinct[$k]))
+                    $that->distinct[$k]['dis'] = array();
+                if (false === $that->distinct[$k]['dis'])
+                    continue;
+                if ('' !== trim($v))
+                    if (count($that->distinct[$k]['dis']) < $that->maxCount) {
+                        $that->distinct[$k]['dis'][trim($v)] = 1;
+                    } else {
+                        $that->distinct[$k]['dis'] = false;
+                    }
+            }
+        },$users);
         foreach ($this->distinct as $k => &$v) {
             if (!empty($v['dis']))
                 ksort($v['dis']);
-        }
-        return $user;
+        };
     }
 
     public function createsql($alias=[]){
