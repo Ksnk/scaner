@@ -5,6 +5,7 @@
  * Date: 24.11.15
  * Time: 19:04
  */
+//require '../../autoload.php';
 
 /**
  * Работа с сайтом http://www.rfbr.ru/rffi/ru/ - сканирование части разделов, книг и конкурсов
@@ -65,17 +66,21 @@ class monitoring_scenario extends scenario
      * Тестируем класс фильторв
      *
      */
-    function do_testfilter($a='',$b='',$c=''){
-        include_once(__DIR__.'/filterClass.php');
-        $f=[];
-        foreach(['a','b','c'] as $n){if(''!=$$n)$f[$n]=$$n;}
-        $filter=new filterClass();
+    function do_testfilter($a = '', $b = '', $c = '')
+    {
+        include_once(__DIR__ . '/filterClass.php');
+        $f = [];
+        foreach (['a', 'b', 'c'] as $n) {
+            if ('' != $$n) $f[$n] = $$n;
+        }
+        $filter = new filterClass();
         $filter->createConditions($f);
     }
 
     const reghtml =
         //'d:/projects/monitoring/monitoring.corpmsp.ru/webapps/StartPage/orgreg.html';
-        '../data/monitoriing/orgress_tpp.html';
+        '../data/monitoriing/orgreg.html';
+    //   data/monitoriing/orgreg_tpp.html'
 
     /**
      * прочитать страницу с ID="xxx" и вывести информацию
@@ -161,7 +166,7 @@ class monitoring_scenario extends scenario
                 19 => 'фамилия, имя, отчество (последнее – при наличии)',
                 20 => 'контактный телефон',
                 21 => 'адрес электронной почты',
-                22 =>'официальный сайт в информационно-телекоммуникационной сети «Интернет»',
+                22 => 'официальный сайт в информационно-телекоммуникационной сети «Интернет»',
                 23 => 'фамилия, имя, отчество (последнее – при наличии)',
                 24 => 'контактный телефон',
             ],
@@ -170,11 +175,11 @@ class monitoring_scenario extends scenario
                 26 => 'реквизиты документа (вид, наименование, дата, номер)',
                 27 => 'номер пункта (статьи) части документа',
             ],
-            'first'=>[0,9,25],
+            'first' => [0, 9, 25],
             'data' => [],
             'rowcnt' => 0,
-            'tdcnt'=>0,
-            'trcnt'=>0,
+            'tdcnt' => 0,
+            'trcnt' => 0,
             'colcnt' => 0,
         ];
 
@@ -185,37 +190,37 @@ class monitoring_scenario extends scenario
         if ($scaner->found) {
             $scaner->position($scaner->reg_begin - 1);
             $scaner->syntax([
-                    'attr' => '\s*:name:\s*=\s*:quoted:',
-                    'name' => '\w+',
-                    'body' => '.*?',
-                    'quoted' => '(?:"[^"]*"|\'[^\']*\')',
-                    'tag' => 'tr|td|div',
-                    'open' => '<:tag:(?::attr:|)>',
-                    'close' => '</:tag:>',
-                ], '~:open:|:close:~sm',
+                'attr' => '\s*:name:\s*=\s*:quoted:',
+                'name' => '\w+',
+                'body' => '.*?',
+                'quoted' => '(?:"[^"]*"|\'[^\']*\')',
+                'tag' => 'tr|td|div',
+                'open' => '<:tag:(?::attr:|)>',
+                'close' => '</:tag:>',
+            ], '~:open:|:close:~sm',
                 function ($line) use (&$_) {
                     //echo htmlspecialchars(print_r($line, true));
 
                     if (UTILS::val($line, 'open') != '' && $line['tag'] == 'tr') {
-                        $_->tdcnt=0;
-                        if(count($_->struct)<=$_->trcnt) $_->struct[]=[];
+                        $_->tdcnt = 0;
+                        if (count($_->struct) <= $_->trcnt) $_->struct[] = [];
                         //ksort($_->struct)[$_->trcnt]);
                         $_->colcnt = 0;
                     }
                     if (UTILS::val($line, 'open') != '' && $line['tag'] == 'td') {
 
-                        if(count($_->struct[0])>0)
-                            for($i=0 ; $i<count($_->struct[0]); $i++){
-                                if(isset($_->struct[$_->trcnt][$_->tdcnt])) $_->tdcnt++;
+                        if (count($_->struct[0]) > 0)
+                            for ($i = 0; $i < count($_->struct[0]); $i++) {
+                                if (isset($_->struct[$_->trcnt][$_->tdcnt])) $_->tdcnt++; else break;
                             }
                         //printf('tr> %s %s',$_->trcnt,$_->tdcnt);
-                        $rowspan=1;
+                        $rowspan = 1;
                         if ($line['name'] == 'rowspan') {
                             $rowspan = trim($line['quoted'], '"\'');
                         }
-                        for($i=0 ; $i<$rowspan;$i++){
-                            if(count($_->struct)<$_->trcnt+$i) $_->struct[]=[];
-                            $_->struct[$_->trcnt+$i][$_->tdcnt]=$_->trcnt.'x'.$_->tdcnt;
+                        for ($i = 0; $i < $rowspan; $i++) {
+                            if (count($_->struct) < $_->trcnt + $i) $_->struct[] = [];
+                            $_->struct[$_->trcnt + $i][$_->tdcnt] = $_->trcnt . 'x' . $_->tdcnt;
                         }
                         $_->rowcnt = max($_->rowcnt, $rowspan);
                     }
@@ -224,19 +229,21 @@ class monitoring_scenario extends scenario
                         $_->cur .= trim($line['_skiped']);
                     }
                     if (UTILS::val($line, 'close') != '' && 'td' == $line['tag']) {
-                        $_->tdcnt++;
-                        foreach(['_','sub','low'] as $sec) {
-                            if (!isset($_->values[$sec]))
-                                $_->values[$sec] = [[]];
-                            if(isset($_->{$sec}[$_->tdcnt])){
-                                if(in_array($_->tdcnt,$_->first)) {
-                                    $_->values[$sec][] = [];
+                        foreach (['_', 'sub', 'low'] as $sec) {
+
+                            if (isset($_->{$sec}[$_->tdcnt])) {
+                                if (in_array($_->tdcnt, $_->first)) {
+                                    if (!isset($_->values[$sec]))
+                                        $_->values[$sec] = [[]];
+                                    else
+                                        $_->values[$sec][] = [];
                                 }
-                                $cnt=count($_->values[$sec])-1;
-                                $_->values[$sec][$cnt][$_->tdcnt]=sprintf('%s x %s %s', $_->trcnt, $_->tdcnt, $_->cur);
+                                $cnt = count($_->values[$sec]) - 1;
+                                $_->values[$sec][$cnt][$_->tdcnt] = sprintf('%s x %s %s', $_->trcnt, $_->tdcnt, $_->cur);
                             }
                         }
                         //$_->values[] = sprintf('%s x %s %s', $_->trcnt, $_->tdcnt, $_->cur);
+                        $_->tdcnt++;
                         $_->colcnt++;
                         $_->cur = '';
                     }
@@ -257,6 +264,7 @@ class monitoring_scenario extends scenario
         var_export($scaner);
         //$this->joblist->append_scenario('scan_book_pages',array("http://www.rfbr.ru/rffi/ru/books/"));
     }
-
-
 }
+
+//$test= new monitoring_scenario();
+//$test->do_edititem('35');

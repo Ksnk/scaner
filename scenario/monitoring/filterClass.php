@@ -122,7 +122,7 @@ class filterClass
                 $this->conditions[$key] = $or;
             }
         }
-       echo '<!--xxx--'.$this->createsql().'-->';
+       //echo '<!--xxx--'.$this->createsql().'-->';
         return $this->conditions;
     }
 
