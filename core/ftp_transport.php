@@ -7,7 +7,7 @@
  */
 
 /**
- * Class sftp_transport - транспорт для общения по sftp
+ * Class ftp_transport - транспорт для общения по ftp
  */
 class ftp_transport {
 
@@ -21,15 +21,15 @@ class ftp_transport {
     }
 
     function login(){
-        preg_match("/ftp:\/\/(?:(.*?):)?(?:(.*?)@)?(.*?)(\/.*)/i", $this->options['uri'], $match);
-        $this->conn_id = ftp_connect($match[3]);
+        preg_match("/(s?ftp):\/\/(?:(.*?):)?(?:(.*?)@)?(.*?)(\/.*)/i", $this->options['uri'], $match);
+        $this->conn_id = ftp_connect($match[4]);
         //or die("Не удалось установить соединение с $ftp_server");
         if(!$this->conn_id) return false;
 
-        if (ftp_login($this->conn_id, $match[1], $match[2]))
+        if (ftp_login($this->conn_id, $match[2], $match[3]))
         {
             // Change the dir
-            ftp_chdir($this->conn_id, $match[4]);
+            ftp_chdir($this->conn_id, $match[5]);
 
             // Return the resource
             return $this->conn_id;
@@ -79,6 +79,20 @@ class ftp_transport {
 // puts an x-byte file named filename.remote on the SFTP server,
 // where x is the size of filename.local
 //       $sftp->put('/ecommerce/test4.txt', dirname(__FILE__).'/test.txt', NET_SFTP_LOCAL_FILE);
+
+    }
+
+    /**
+     * загрузка файла по sftp
+     * @param $contents
+     * @param $destination
+     * @param bool $is_filename
+     */
+    function get($filename,$destination=''){
+        $sftp=$this->get_net_ftp();
+        $p=pathinfo($filename);
+        $ln=empty($destination)?dirname(__FILE__).'/'.$p['basename']:$destination;
+        ftp_get ( $sftp , $ln, $filename, FTP_BINARY );
 
     }
 }

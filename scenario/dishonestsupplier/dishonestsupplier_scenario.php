@@ -38,69 +38,69 @@ class dishonestsupplier_scenario extends scenario {
         }
     }
 
-    /**
-     * Прочитать xml с товарами от Стокке и записать информацию в таблицу.
-     * @param file $xml_name :select[~dir(*.xml)]  имя файла для загрузки
-     */
-    function do_fillStokkegoods($xml_name){
-        /**
-         * временные
-         */
-
-        //<product product-id="1001">
-        //<display-name xml:lang="ru">Tripp Trapp® Стульчик</display-name>
-
-        //lap_stokke_items
-        $store=array();
-
-        $this->scaner->newhandle($xml_name);
-        do {
-            $item=false;
-            $this->scaner
-                ->until()
-                ->scan('/<product product-id="([^"]+)"/m',1,'id')
-                ->until('/<\/product>/');
-
-            if ($this->scaner->found) {
-                $this->scaner
-                    ->scan('/<display-name xml:lang="ru">(.*?)<\/display-name>/m',1,'name');
-                if ($this->scaner->found) {
-                    $r=$this->scaner->getresult();
-                    $this->scaner->scan('<variants>');
-                    if ($this->scaner->found) continue;
-
-                    $item=$r;
-                }
-            } else {
-                break;
-            }
-            if(!$item){
-                continue;
-            }
-            //var_dump($item);
-            $store[$item['id']]=$item['name'];
-            printf('%s: %s<br>',$item['id'],$item['name']);
-        } while(true);
-
-        $ids=$this->getDB()->selectCol('select articul from lap_stokke_items where articul in (?[?1])',$store);
-        if(!empty($ids)){
-            foreach($ids as $i){
-                unset($store[$i]);
-            }
-        }
-        if(!empty($store)){
-            $insert=$this->getDB()->insertValues('insert into lap_stokke_items (?1[?2k]) values () ' .
-                'on duplicate key update ?1[?2k=VALUES(?2k)];',array('articul','name'));
-            foreach($store as $k=>$v){
-                $insert->insert(array('articul'=>$k,'name'=>$v));
-            }
-            $insert->flush();
-        }
-
-    }
-
     function upload_zip($filename){
         echo $filename.PHP_EOL;
+        $transport=$this->get_transport();
+        $transport->get($filename);
+//        function receivefile($filename,$dir='tmp'){
+/*
+            $src = fopen("php://input", 'r');
+            if(!is_dir($dir))
+            {
+                mkdir($dir, 0755, true);
+            }
+            $dest = fopen($dir.'/'.$filename, 'wb');
+            stream_copy_to_stream($src, $dest);// . " байт скопировано в first1k.txt\n";
+            fclose($dest);
+            $result=true;
+            if (substr($filename,-4)=='.zip'){
+                $zip = zip_open($dir.'/'.$filename);
+
+                $dir.='/'.basename($filename,'.zip');
+                $files = 0;
+                $folders = 0;
+
+                if ($zip) {
+                    while ($zip_entry = zip_read($zip)) {
+
+                        $name = zip_entry_name($zip_entry);
+
+                        $path_parts = pathinfo($name);
+                        # Создем отсутствующие директории
+                        if(!is_dir($dir.'/'.$path_parts['dirname']))
+                        {
+                            mkdir($dir.'/'.$path_parts['dirname'], 0755, true);
+                        }
+
+                        //$log->addEntry(array('comment' => 'unzip 2 ' . $name));
+                        if (zip_entry_open($zip, $zip_entry, "r")) {
+                            $buf = zip_entry_read($zip_entry, zip_entry_filesize($zip_entry));
+
+                            $file = fopen($dir.'/'.$name, "wb");
+                            if ($file) {
+                                fwrite($file, $buf);
+                                fclose($file);
+                                $this->gotafile($dir.'/'.$name);
+                                $files++;
+                            } else {
+                                $result=false;
+                                //$log->addEntry(array('comment' => 'error unzipopen file '.$name));
+                            }
+                            zip_entry_close($zip_entry);
+                        }
+                    }
+                    zip_close($zip);
+                } else {
+                    // error
+                    $result=false;
+                }
+
+            } else {
+                $this->gotafile($dir.'/'.$filename);
+            }
+            return $result;
+//        }
+*/
     }
 
     /**
@@ -120,7 +120,7 @@ class dishonestsupplier_scenario extends scenario {
                     $times[$item['filename']] = $item['mtime'];
 
                     $this->joblist->append_scenario('upload_zip', [$dir.$item['filename']]);
-
+                    continue 2;
                 }
             }
         }
