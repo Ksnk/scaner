@@ -193,7 +193,7 @@ class monitoring_scenario extends scenario
                 'attr' => '\s*:name:\s*=\s*:quoted:',
                 'name' => '\w+',
                 'body' => '.*?',
-                'quoted' => '(?:"[^"]*"|\'[^\']*\')',
+                'quoted' => '(?:"[^"]*"|\'[^\']*\'|[^\'"]*)',
                 'tag' => 'tr|td|div',
                 'open' => '<:tag:(?::attr:|)>',
                 'close' => '</:tag:>',
