@@ -43,6 +43,11 @@ class ftp_transport {
         return $this->conn_id;
     }
 
+    /**
+     * получение списка файлов из стандартного вывода Unix
+     * @param string $dir
+     * @return array
+     */
     function scan($dir='.'){
         $conn_id=$this->get_net_ftp();
         $result=[];
@@ -83,16 +88,16 @@ class ftp_transport {
     }
 
     /**
-     * загрузка файла по sftp
+     * получение файла по ftp
      * @param $contents
      * @param $destination
-     * @param bool $is_filename
+     * @return string
      */
     function get($filename,$destination=''){
         $sftp=$this->get_net_ftp();
         $p=pathinfo($filename);
         $ln=empty($destination)?dirname(__FILE__).'/'.$p['basename']:$destination;
-        ftp_get ( $sftp , $ln, $filename, FTP_BINARY );
-
+        if(!ftp_get ( $sftp , $ln, $filename, FTP_BINARY )) return '';
+        return $ln;
     }
 }

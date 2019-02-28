@@ -25,82 +25,32 @@ class dishonestsupplier_scenario extends scenario {
         return $tr;
     }
 
-    /**
-     * Загрузка файла на сайт стокке.ком в специальное место
-     * @param $contents
-     * @param $contents
-     * @param $name
-     */
-    function upload_file($contents,$name,$is_filename=false){
-        $transport=$this->get_transport();
-        if($transport){
-            $transport->upload($contents,$name,$is_filename);
-        }
+    function scan_xml($buf,$name){
+        echo $name.PHP_EOL;
     }
 
-    function upload_zip($filename){
+    function download_zip($filename){
         echo $filename.PHP_EOL;
         $transport=$this->get_transport();
-        $transport->get($filename);
-//        function receivefile($filename,$dir='tmp'){
-/*
-            $src = fopen("php://input", 'r');
-            if(!is_dir($dir))
-            {
-                mkdir($dir, 0755, true);
-            }
-            $dest = fopen($dir.'/'.$filename, 'wb');
-            stream_copy_to_stream($src, $dest);// . " байт скопировано в first1k.txt\n";
-            fclose($dest);
-            $result=true;
-            if (substr($filename,-4)=='.zip'){
-                $zip = zip_open($dir.'/'.$filename);
+        $lfn=$transport->get($filename);
+        if($lfn) {
+            if ($zip = zip_open($lfn)) {
+                while ($zip_entry = zip_read($zip)) {
 
-                $dir.='/'.basename($filename,'.zip');
-                $files = 0;
-                $folders = 0;
+                    $name = zip_entry_name($zip_entry);
 
-                if ($zip) {
-                    while ($zip_entry = zip_read($zip)) {
-
-                        $name = zip_entry_name($zip_entry);
-
-                        $path_parts = pathinfo($name);
-                        # Создем отсутствующие директории
-                        if(!is_dir($dir.'/'.$path_parts['dirname']))
-                        {
-                            mkdir($dir.'/'.$path_parts['dirname'], 0755, true);
-                        }
-
-                        //$log->addEntry(array('comment' => 'unzip 2 ' . $name));
-                        if (zip_entry_open($zip, $zip_entry, "r")) {
-                            $buf = zip_entry_read($zip_entry, zip_entry_filesize($zip_entry));
-
-                            $file = fopen($dir.'/'.$name, "wb");
-                            if ($file) {
-                                fwrite($file, $buf);
-                                fclose($file);
-                                $this->gotafile($dir.'/'.$name);
-                                $files++;
-                            } else {
-                                $result=false;
-                                //$log->addEntry(array('comment' => 'error unzipopen file '.$name));
-                            }
-                            zip_entry_close($zip_entry);
-                        }
+                    if (zip_entry_open($zip, $zip_entry, "r")) {
+                        $buf = zip_entry_read($zip_entry, zip_entry_filesize($zip_entry));
+                        $this->scan_xml($buf, $name);
+                        zip_entry_close($zip_entry);
                     }
-                    zip_close($zip);
-                } else {
-                    // error
-                    $result=false;
                 }
-
-            } else {
-                $this->gotafile($dir.'/'.$filename);
+                zip_close($zip);
             }
-            return $result;
-//        }
-*/
+        }
+        unlink($lfn);
+        return true;
+
     }
 
     /**
@@ -119,7 +69,7 @@ class dishonestsupplier_scenario extends scenario {
                     printf('file `%s`, time: %s<br>' . PHP_EOL, $item['filename'], date('d-m-Y H:i:y', $item['mtime']));
                     $times[$item['filename']] = $item['mtime'];
 
-                    $this->joblist->append_scenario('upload_zip', [$dir.$item['filename']]);
+                    $this->joblist->append_scenario('download_zip', [$dir.'/'.$item['filename']]);
                     continue 2;
                 }
             }
