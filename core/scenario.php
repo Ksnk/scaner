@@ -1,7 +1,9 @@
 <?php
 
+namespace Ksnk\scaner;
 
-class scenario extends base {
+class scenario extends base
+{
     /**
      * @var joblist
      * @property scaner scaner
@@ -9,8 +11,10 @@ class scenario extends base {
      */
     var $joblist;
 
-    function __construct($joblist=null){
-        $this->joblist=$joblist;
+    function __construct($joblist = null)
+    {
+        parent::__construct();
+        $this->joblist = $joblist;
     }
 
     /**
@@ -19,10 +23,14 @@ class scenario extends base {
      */
     var $result;
 
-    function __get($name){
-        switch ($name){
+    function __get($name)
+    {
+        switch ($name) {
             case 'scaner':
-                $this->$name=new scaner();
+                $this->$name = new scaner();
+                break;
+            case 'spider':
+                $this->$name = new spider();
                 break;
             default:
                 return null;

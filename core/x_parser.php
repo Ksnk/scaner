@@ -1,4 +1,7 @@
 <?php
+
+namespace Ksnk\scaner;
+
 /**
  *
  * Класс для парсинга Doсtype информации и создания контролов для утилит.
@@ -223,7 +226,7 @@ class x_parser {
     }
 
     private static function reflect($class){
-        return new ReflectionClass($class);
+        return new \ReflectionClass($class);
     }
 
     static function getParameters($method,$class_name,$include=''){

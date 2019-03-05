@@ -59,4 +59,4 @@ class Autoload
     }
 }
 
-Autoload::register(array('~/core', '~/libs', '~'));
+Autoload::register(array('~/core', '~/libs'));

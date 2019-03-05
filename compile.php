@@ -39,7 +39,6 @@ foreach($files as $f=>$path){
     $phar->addFromString($f,file_get_contents($path));
 }
 
-
 $binary = file(__DIR__ . '/cli.php');
 //unset($binary[1]);
 unset($binary[0]);

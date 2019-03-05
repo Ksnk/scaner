@@ -6,6 +6,7 @@
  * Time: 18:52
  */
 
+namespace Ksnk\scaner;
 
 /**
  * Паучёк

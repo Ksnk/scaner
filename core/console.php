@@ -5,6 +5,7 @@
  * Date: 09.11.17
  * Time: 11:25
  */
+namespace Ksnk\scaner;
 
 class console extends scaner{
 
@@ -91,8 +92,4 @@ class console extends scaner{
         return $this;
     }
 
-}
-
-class ConsoleException extends \Exception
-{
 }

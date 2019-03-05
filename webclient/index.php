@@ -1,4 +1,11 @@
 <?php
+
+use  \Ksnk\scaner\base,
+    \Ksnk\scaner\joblist,
+    \Ksnk\scaner\x_parser
+    ;
+
+define('USE_NAMESPACE', 'Ksnk\scaner\\');
 /**
  * Created by PhpStorm.
  * User: Аня
@@ -11,6 +18,8 @@ error_reporting(E_ALL);
 define('INDEX_DIR',dirname(__DIR__));
 
 include_once "../autoload.php";
+
+\Autoload::map([USE_NAMESPACE=>'']);
 
     define('TEMP_DIR','../temp/');
 
@@ -203,9 +212,9 @@ x_parser::$templates = array(
             </div>{% if res %}<div class="panel-body">{{res}}</div>{% endif %}</div>'
 );
 
-$filter =UTILS::val($_GET,'filter');
+$filter =\UTILS::val($_GET,'filter');
 if(!empty($filter)){
-    $filter=UTILS::masktoreg($filter);
+    $filter=\UTILS::masktoreg($filter);
 } else {
     $filter='/./';
 }
@@ -221,7 +230,7 @@ if(!empty($_GET['tag'])){
 $tags=array();
 
 foreach ($scenariofiles as $sc) {
-    $classname = basename($sc, '.php');
+    $classname = USE_NAMESPACE.basename($sc, '.php');
     $res = x_parser::getParameters('', $classname, realpath($sc));
     //var_export($tag);
     foreach ($res[$classname] as $method => $val) {

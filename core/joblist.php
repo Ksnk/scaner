@@ -6,6 +6,7 @@
  * Time: 18:53
  */
 
+namespace Ksnk\scaner;
 /**
  * список задач. Его можно сохранять, восстанавливать и толкать
  * Class joblist
@@ -19,6 +20,7 @@ class joblist extends base
         $cdir='',$cclass='',$data=array();
 
     function __construct(){
+        parent::__construct();
         $this->_timestart=microtime(true);
         $this->load();
     }
@@ -141,8 +143,8 @@ class joblist extends base
         $scn = array_shift($task[1]);
         switch ($task[0]) {
             case "scenario":
-                $this->cdir=UTILS::val($scn,'dir');
-                $this->cclass=UTILS::val($scn,'class');
+                $this->cdir=\UTILS::val($scn,'dir');
+                $this->cclass=\UTILS::val($scn,'class');
                 if(!class_exists($scn['class'],false))
                     if(isset($scn['dir']))
                         include_once($scn['dir']);
