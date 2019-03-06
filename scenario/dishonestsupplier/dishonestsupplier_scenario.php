@@ -71,7 +71,7 @@ class dishonestsupplier_scenario extends scenario {
                         break;
                     case 'inn':
                         if(preg_match('/(\d{9,12})/',$line['_skiped'],$m )){
-                            if(strlen($m[1])==9 || strlen($m[1])==11) $m[1].='0'.$m[1];
+                            if(strlen($m[1])==9 || strlen($m[1])==11) $m[1]='0'.$m[1];
                             $res[$line['tag']]=$m[1];
                         };
                         break;
