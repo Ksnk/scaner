@@ -12,8 +12,7 @@ namespace Ksnk\scaner;
  * @tags Zakupki
  */
 class dishonestsupplier_scenario extends scenario {
-    /** @var spider  */
-    //var $spider,
+
     /** @var resource */
     var    $csv_handle;
     static $single=null;
@@ -26,6 +25,7 @@ class dishonestsupplier_scenario extends scenario {
         }
         return self::$single;
     }
+
     /**
      * @param bool $create
      * @return bool|ftp_transport

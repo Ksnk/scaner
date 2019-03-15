@@ -25,12 +25,13 @@ class tpl_base
         $this->macro = array();
     }
 
+    function sc_callback($m){
+        return ENGINE::exec(array('Main','shortcode'), array($m[1]));
+    }
+
     function shortcode($s){
         if(false!==strpos($s,'[[')){
-            return preg_replace_callback('/\[\[(.*?)\]\]/',function($m){
-                //\ENGINE::debug($m);
-                return ENGINE::exec(['Main','shortcode'], array($m[1]));
-            },
+            return preg_replace_callback('/\[\[(.*?)\]\]/',array($this,'sc_callback'),
                 $s);
         } else {
             return $s;
@@ -121,9 +122,7 @@ class tpl_base
     }
 
     /**
-     * еще один вариант
-     * выдать один из вариантов, в зависимости от параметра
-     * {{ number }} огур{{ number | rusuf('ец|ца|цов')}}
+     * замена. Если указана регулрка - preg_replace
      * @param $n
      * @param string $search
      * @param string $replace
@@ -196,6 +195,22 @@ Pellentesque dictum scelerisque urna, sed porta odio venenatis ut. Integer aucto
         return $result;
     }
 
+    static function toRusDate($daystr=null,$format="j F, Y г."){
+        //print_r($datstr);
+        if ($daystr){
+            if(!is_numeric($daystr))
+                $daystr=strtotime($daystr);
+        }
+        else $daystr=time();
+        return	str_replace( //XXX: нужно проверить английские имена месяцев
+            array('january','february','march','april','may','june','july',
+                'august','september','october','november','december'),
+            array('января','февраля','марта','апреля','мая','июня','июля',
+                'августа','сентября','октября','ноября','декабря'),
+            strtolower(date($format,
+                $daystr)));
+    }
+
     function func_date($s, $format = "d m Y")
     {
         static $offset;
@@ -206,10 +221,8 @@ Pellentesque dictum scelerisque urna, sed porta odio venenatis ut. Integer aucto
             $myDateTime = new DateTime((date("r")), $gmtTimezone);
             $offset = $userTimezone->getOffset($myDateTime);
         }
-        if (is_numeric($s))
-            return date($format, $s+$offset);
-        else
-            return date($format, strtotime($s)+$offset);
+        if (!is_numeric($s)) $s=strtotime($s);
+        return self::toRusDate( $s+$offset, $format);
     }
 
     function func_truncate($s, $length = 255, $killwords = False, $end = ' ...')
@@ -363,13 +376,13 @@ Pellentesque dictum scelerisque urna, sed porta odio venenatis ut. Integer aucto
 
     public function func_fileurl($id){
         if(empty($id)) return '';
-        $f=new \Ksnk\model\modelFile();
+        $f=new modelFile();
         $r=$f->get($id);
         return trim($r['filename'],'~');
     }
 
     public function func_enginelink($p1='',$p2='',$p3=''){
-        return \UTILS::url($p1,$p2,$p3);
+        return UTILS::url($p1,$p2,$p3);
     }
 
     /**

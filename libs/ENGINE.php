@@ -3,12 +3,14 @@
  * статический класс - преставитель CMS в космосе.
  * ----------------------------------------------------------------------------------
  * $Id: X-Site cms (2.0, LapsiTV build), written by Ksnk (sergekoriakin@gmail.com),
- * ver: , Last build: 1505081407
- * GIT: $
+ * ver: xxx, Last build: 1812031618
+ * status : draft build.
+ * GIT: origin	https://github.com/Ksnk/ENGINE.git (push)$
  * ----------------------------------------------------------------------------------
- * License MIT - Serge Koriakin - Jule 2012
+ * License MIT - Serge Koriakin - 2012-2018
  * ----------------------------------------------------------------------------------
  */
+/*  --- point::ENGINE_namespace --- */
 
 /*  --- point::ENGINE_top --- */
 
@@ -45,7 +47,7 @@ class xData implements  Iterator {
     }
 
     protected $data=array();
-    private $def='',$eoa=false;
+    private $def = '';
 
     function getData(){
         return $this->data;
@@ -82,7 +84,7 @@ class xData implements  Iterator {
     }
     // итератор
     function rewind() {
-        $this->eoa=count($this->data==0);
+        // $this->eoa=true;//count($this->data==0);
         reset($this->data);
     }
 
@@ -95,13 +97,24 @@ class xData implements  Iterator {
     }
 
     function next() {
-        return $this->eoa=(false!==next($this->data));
+        return next($this->data);
     }
 
-    function valid() {
-        return $this->eoa;
+    function valid()
+    {
+        $key = key($this->data);
+        return ($key !== NULL && $key !== FALSE);
     }
 
+    }
+
+interface engine_cache {
+    static function cache($key, $value = null, $time = null, $tags = null);
+    }
+
+interface engine_options {
+    function get($name);
+    function set($name, $value = null);
 }
 
 /**
@@ -117,41 +130,42 @@ class ENGINE
 
     /*  --- point::ENGINE_header --- */
 
-    /** @var Memcache null */
-    private static $memcached = null;
+    private static $events = array();
 
-    
+
 
     static private $options = array(); // пары: имя-значение
     static private $transport = array(); // пары: имя - механизм сохранения
     static public $default_transport = '';
     static private $transports = array(); // строка -> объект
+   // static private $class_alias = false;
 
-    
+
 
     static public $session_started = false;
 
-    
+
 
     static $cookie_name = 'testing';
 
-    
+
+
+
+    static private $interface = array();
+
+
 
     /** @var xDatabaseLapsi */
     static private $db = null;
 
-    
 
-    static $start_time ;
-
-    
-
-    static private $_logger_table = false;
-
-    
 
     static $url_par = null;
     static $url_path = null;
+
+
+
+    static $start_time;
 
     /**
      * простейший строковый шаблон для вывода минимально параметризованных строк.
@@ -187,7 +201,7 @@ class ENGINE
      */
     static function error($msg, $par = array(), $backtrace = array())
     {
-        if (!error_reporting()) return;
+        if (!error_reporting()) return false;
         $error_handler = self::option('error.handler', 'echo');
         $error_format = self::option('error.format'
             , "<!--xxx-error-{backtrace}\n{msg}\n-->");
@@ -250,7 +264,7 @@ class ENGINE
 
     static function callFirst($method, $par)
     {
-        foreach (self::$class_list as $k => &$v)
+        foreach (self::$class_list as &$v)
             if (method_exists($v, $method)) {
                 if (!is_null($x = call_user_func_array(array(&$v, $method), $par)))
                     return $x;
@@ -261,7 +275,7 @@ class ENGINE
     static function callAll($method, $par = '')
     {
         $result = false;
-        foreach (self::$class_list as $k => &$v)
+        foreach (self::$class_list as &$v)
             if (method_exists($v, $method)) {
                 $result = $result || call_user_func(array($v, $method), $par);
             }
@@ -286,6 +300,8 @@ class ENGINE
      * get an object from alias record
      * @static
      * @param $name
+     * @param null $par
+     * @return null
      */
     static function getObj($name, $par = null)
     {
@@ -300,8 +316,8 @@ class ENGINE
             if (class_exists($class)) {
                 self::$class_list[$name] = new $class($par);
             } else {
-                if (!error_reporting()) return null; else
-                if ($name == $class) {
+                if (!error_reporting()) return null;
+                else if ($name == $class) {
                     self::error(
                         'class `{class}` not found in (cwd:{dir})',
                         array('{class}' => $class, '{dir}' => getcwd())
@@ -326,7 +342,7 @@ class ENGINE
      * вызвать класс-метод.
      * Если класс из массива - вызывать объект из фабрики.
      *
-     * @param callable $func
+     * @param callable|array $func
      * @param null|array $args
      * @param string $error_rule
      * @return mixed
@@ -365,7 +381,7 @@ class ENGINE
         return '';
     }
 
-    static function _(&$val, $def = '')
+    static function _($val, $def = '')
     {
         return empty($val) ? $def : $val;
     }
@@ -403,41 +419,74 @@ class ENGINE
     /*  --- point::ENGINE_body --- */
 
     /**
-     * упрощенный доступ к memcached
+     * Регистрация обработчика событий
+     *
      * @static
-     * @param $key
-     * @param null $value
-     * @param int $time в секундах 28800 - 8 часов
-     * @param array $tags - список дополнительных тегов.
-     * @return bool|null
+     * @param string|array $event
+     * @param null|callable $handler
+     * @param string $phase - значения pre||post
      */
-    static function cache($key, $value = null, $time = null,$tags=null)
+    static public function register_event_handler($event, $handler = null, $phase = '')
     {
-        if(!class_exists('Memcache'))
-            return false;
-        if(is_null($time))$time=28800;
-        if (empty(self::$memcached)) {
-            self::$memcached = new Memcache;
-            self::$memcached->connect('localhost', 11211);
-            if (empty(self::$memcached)) return false;
+        if (is_array($event)) {
+            foreach ($event as $ev) {
+                self::register_event_handler($ev, $handler, $phase);
+            }
+            return;
         }
-        if(!empty($tags)){
-            foreach($tags as $tag){
-                $x=self::$memcached->get($tag);
-                if(empty($x)) self::$memcached->set($tag,$x=1);
-                $key.='.'.$x;
+        if (!empty($phase)) {
+            if (!preg_match('/^post|pre$/', $phase))
+                self::error(sprintf('ENGINE: Wrong $phase($s) value awhile registerring event handler `$s`'
+                    , $phase, $handler));
+            else {
+                $event .= '/' . $phase;
             }
         }
-        if (strlen($key) > 40) $key = md5($key);
-        if (is_null($value)) {
-            if (self::_($GLOBALS['SERVER_PORT']) == "8080") return false;
-            return self::$memcached->get($key);
-        } else {
-            self::$memcached->set($key, $value, MEMCACHE_COMPRESSED,  $time);
-        }
-        return false;
+        if (!isset(self::$events[$event]))
+            self::$events[$event] = array();
+        array_push(self::$events[$event], $handler);
     }
-    
+
+    /**
+     * убрать обработчик событий
+     *
+     * @static
+     * @param $event
+     * @param null|callable $handler - либо функция, либо символическое имя. при отсутствии параметра чистится вся очередь события
+     */
+    static public function unregister_event_handler($event, $handler = null)
+    {
+        if (!isset(self::$events[$event]))
+            return;
+        if (is_null($handler))
+            self::$events[$event] = array();
+        else if (is_callable($handler)) {
+            foreach (array($event . '/pre', $event, $event . '/post') as $ev)
+                if (isset(self::$events[$ev])) {
+                    $key = array_search($handler, self::$events[$ev]);
+                    if ($key !== false)
+                        unset(self::$events[$ev][$key]);
+            }
+        }
+        }
+
+    /**
+     * вызвать все обработчики события
+     *
+     * @static
+     * @param $event
+     * @param null $args
+     */
+    static public function trigger_event($event, $args = null)
+    {
+        foreach (array($event . '/pre', $event, $event . '/post') as $ev)
+            if (isset(self::$events[$ev]))
+                foreach (self::$events[$ev] as &$handle) {
+                    self::exec($handle, array($event, &$args));
+    }
+    }
+
+
 
     /**
      * Выдать параметр по имени
@@ -462,13 +511,15 @@ class ENGINE
      * @static
      * @param string|array $name
      * @param null $value
-     * @param string|object $transport
+     * @param string|\object $transport
      * @return bool|mixed
      */
     static public function set_option($name = '', $value = null, $transport = '')
     {
         if (is_array($name))
             $transport = $value;
+        if($name=='engine.aliaces')
+            self::$class_alias=false;
 
         if (!empty($transport) && is_string($transport) && !isset(self::$transports[$transport])) {
             self::read_options($transport);
@@ -535,11 +586,17 @@ class ENGINE
             // отделяем имя от параметра
             $x = explode('|', $transport . '|');
             $y=explode('~',$x[0].'~');
-            if (is_callable(array('engine_options_' . $y[0], 'init')))
-                self::$transports[$transport] =
-                    call_user_func(array('engine_options_' . $y[0], 'init'), $y[1],$x[1]);
-            else
                 self::$transports[$transport] = 'engine_options_' . $y[0];
+            foreach(array('','engine_options_','\\'.__NAMESPACE__.'\\engine_options_') as $pref) {
+                if (is_callable(array($pref . $y[0], 'init'))) {
+                    self::$transports[$transport] =
+                        call_user_func(array($pref . $y[0], 'init'), $y[1], $x[1]);
+                    break;
+                } else if(class_exists($pref . $y[0])){
+                    self::$transports[$transport] = $pref .$y[0];
+                    break;
+                }
+            }
         }
     }
 
@@ -547,6 +604,12 @@ class ENGINE
     {
         $res = array();
         $reg = '#^' . preg_quote($start) . "(.*)$#";
+        foreach (self::$transport as $k => $v) {
+            if (preg_match($reg, $k, $m)) {
+                $v = self::option($k);
+                $res[$m[1]] = $v;
+            }
+        }
         foreach (self::$options as $k => $v) {
             if (preg_match($reg, $k, $m)) {
                 $res[$m[1]] = $v;
@@ -555,42 +618,12 @@ class ENGINE
         return $res;
     }
 
-    
 
-    static public function _autoload($cls)
-    {
-        //static $include_path;
-        $classes = ENGINE::option('engine.class_vocabular');
-        if (is_array($classes) && isset($classes[$cls])) {
-            $x = $classes[$cls];
-            if (substr($x, -1, 1) == '/') {
-                $x.=$cls;
-            }
-        } else {
-            $x=$cls;
-        }  ;
-        $x.= '.php' ;
-        if(!isset($include_path)) {
-            $include_path=ENGINE::option('engine.include_path',array('.'));
-        }
-        foreach($include_path as $path) {
-            if (is_readable($path .'/'.self::$SUBDIR. $x)){
-                include_once($path .'/'.self::$SUBDIR. $x);
-                return;
-            }
-        }
-        if (function_exists("__autoload"))
-        {
-            __autoload($cls) ;
-        }
-
-    }
-    
 
     static function start_session($log=true)
     {
         if (!self::$session_started) {
-            $session_name = ENGINE::option('engine.sessionname');
+            $session_name = self::option('engine.sessionname');
             if (!empty($session_name)) {
                 session_name($session_name);
             }
@@ -604,6 +637,7 @@ class ENGINE
                     $log[$_SERVER[$name]] = $name;
                 }
             }
+                /*
             ENGINE::log(
                 'Старт сессии.
 IP:{{IP}}
@@ -614,6 +648,7 @@ UA:"{{HTTP_USER_AGENT}}"', array('type' => 'session',
                     '{{HTTP_USER_AGENT}}' => ENGINE::_($_SERVER['HTTP_USER_AGENT'], '-')
                 )
             );
+                */
             }
             self::$session_started = true;
         }
@@ -645,7 +680,7 @@ UA:"{{HTTP_USER_AGENT}}"', array('type' => 'session',
             self::$session_started = false;
         }
     }
-    
+
 
     /**
      * инициализация системы и прописка основных обработчиков
@@ -670,6 +705,7 @@ UA:"{{HTTP_USER_AGENT}}"', array('type' => 'session',
         }
         //////////////////////////////////////////////////////////////////////////////////
 // register all default interfaces
+        if (method_exists('ENGINE', 'register_interface'))
         foreach (ENGINE::option('engine.interfaces', array()) as $k => $v)
             ENGINE::register_interface($k, $v);
 
@@ -683,6 +719,7 @@ UA:"{{HTTP_USER_AGENT}}"', array('type' => 'session',
         foreach (ENGINE::option('external.options', array()) as $k => $v)
             ENGINE::set_option($k, null, $v);
 
+        if (method_exists('ENGINE', 'register_event_handler'))
         foreach (ENGINE::option('engine.event_handler', array()) as $k => $v) {
             if (is_array($v) && count($v) > 0) {
                 foreach ($v as $vv) {
@@ -692,7 +729,7 @@ UA:"{{HTTP_USER_AGENT}}"', array('type' => 'session',
         }
     }
 
-    
+
 
     /**
      * функция получения информации о стеке вызовов.
@@ -874,10 +911,10 @@ UA:"{{HTTP_USER_AGENT}}"', array('type' => 'session',
 
         if( $sub == false )
             return $output ;
-
+        return '';
     }
 
-    
+
 
 
     /**
@@ -925,7 +962,58 @@ UA:"{{HTTP_USER_AGENT}}"', array('type' => 'session',
         }
         return false;
     }
-    
+
+
+    /**
+     * Регистрация нового интерфейса или сброс, если второго параметра нет
+     *
+     * @static
+     * @param $method - имя метода
+     * @param null|callable $callable - параметры регистрации
+     * @return null - последнее значение хандлера для возможности вернуть предыдущее
+     */
+    static public function register_interface($method, $callable = null)
+    {
+        $result = null;
+        if (!is_string($method)) {
+            ENGINE::error('wrong interface definition');
+            return $result;
+        }
+        if (isset(self::$interface[$method])) {
+            // so return the past one.
+            $result = self::$interface[$method];
+        }
+        if (is_null($callable))
+            unset(self::$interface[$method]);
+        else
+            self::$interface[$method] = $callable;
+        return $result;
+    }
+
+    /**
+     * Just a little magic
+     * Простой механизм для монтажа расширений
+     *
+     * @param $method
+     * @param $args
+     * @return mixed
+     */
+
+    static public function __callStatic($method, $args)
+    {
+        if(isset(self::$interface[$method])) {
+            return ENGINE::exec(self::$interface[$method], $args);
+        } else {
+            $class=ENGINE::option('interface.'.$method, false);
+            if(false!==$class && is_callable(array($class,$method))) {
+                self::register_interface($method, array($class,$method));
+                return ENGINE::exec(self::$interface[$method], $args);
+            }
+            return null;
+        }
+    }
+
+
 
 
     /**
@@ -940,90 +1028,11 @@ UA:"{{HTTP_USER_AGENT}}"', array('type' => 'session',
         if (empty(self::$db)) {
             self::$db = self::getObj('Database', $option);
         }
-        self::$db->set_option($option);
+        if (!empty(self::$db)) self::$db->set_option($option);
         return self::$db;
     }
 
-    
 
-    static public function _report()
-    {
-        echo '<!--';
-        /*  --- point::ENGINE_final_report --- */
-
-        if (!empty(self::$db)) {
-            echo self::$db->report();
-        }
-
-        printf("%f sec spent (%s)"
-            ,microtime(true)-self::$start_time,date("Y-m-d H:i:s"));
-        echo '-->';
-    }
-    static public function _shutdown()
-    {
-        /*  --- point::ENGINE_shutdown --- */
-
-        if (self::$memcached) {
-            self::$memcached->close();
-            self::$memcached = null;
-        }
-
-        if(ENGINE::option('noreport'))return;
-        ENGINE::_report();
-    }
-    
-
-    /**
-     * вывод собощения в системный лог.
-     * Записывается сессия пользователя, если она есть.
-     * По дороге делается попытка проинициировать таблицу лога.
-     *
-     * @param string $msg сообщение
-     * @param array  $arg параметры в стиле _t + параметр type -
-     *
-     * @return empty
-     */
-    static function log($msg, $arg = array())
-    {
-        if (!self::$_logger_table) {
-            $uri = parse_url(
-                ENGINE::option('engine.logger_uri', 'db://userlog')
-            );
-            if (!empty($uri['host'])) {
-                $uri['path'] = $uri['host'] . ENGINE::_($uri['path']);                    }
-            self::$_logger_table = ENGINE::option('engine.log_table', $uri['path']);
-        }
-        if (is_string($arg)) {
-            $arg = array('type' => $arg);
-        } else if (!isset($arg['type'])) {
-            $arg['type'] = 'userlog';
-        }
-        if (!isset($arg['key'])) {
-            $arg['key'] = session_id();
-        }
-        for($i=1;$i<2;$i++){
-        $res=ENGINE::db()->query(
-            'insert into `' . self::$_logger_table .
-            '` set `msg`=?,`type`=?,`key`=?;',
-            ENGINE::_t($msg, $arg), $arg['type'], $arg['key']
-        );
-            if(!$res){
-                ENGINE::db()->query(
-                    'create table if not exists `' . self::$_logger_table . '`(
-`id` INT( 11 ) NOT NULL AUTO_INCREMENT ,
-`date` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ,
-`msg` TEXT ,
-`type` VARCHAR( 8 ) NOT NULL ,
-`key` VARCHAR( 40 ) NOT NULL ,
-  PRIMARY KEY (`id`),
-  KEY `date` (`date`),
-  KEY `key` (`key`)
-) ENGINE = MYISAM ;'
-                );
-            }
-        }
-    }
-    
 
     /**
      * организация массива - регулярка, имена захваченных
@@ -1041,7 +1050,7 @@ UA:"{{HTTP_USER_AGENT}}"', array('type' => 'session',
              */
             $rules = ENGINE::option(
                 'router.rules',
-                array('', array('class' => 'Main', 'method' => 'do_Default'))
+                array(array('', array('class' => 'Main', 'method' => 'do_Default')))
             );
         }
 
@@ -1060,7 +1069,7 @@ UA:"{{HTTP_USER_AGENT}}"', array('type' => 'session',
             array('class' => 'Main', 'method' => 'do_404')
         );
 
-        foreach ($rules as $rule) {
+        foreach ($rules as $rule) if(!empty($rule)){
             if (empty($rule[0]) || preg_match($rule[0], $query_string, $m)) {
                 foreach ($rule[1] as $k => $v) {
                     if (is_int($k)) {
@@ -1146,7 +1155,30 @@ UA:"{{HTTP_USER_AGENT}}"', array('type' => 'session',
 
     }
 
-    
+
+
+    static public function _report()
+    {
+        echo '<!--';
+        /*  --- point::ENGINE_final_report --- */
+
+        if (!empty(self::$db)) {
+            echo self::$db->report();
+        }
+
+        printf("%f sec spent (%s)"
+            , microtime(true) - self::$start_time, date("Y-m-d H:i:s"));
+        echo '-->';
+    }
+
+    static public function _shutdown()
+    {
+        /*  --- point::ENGINE_shutdown --- */
+
+        if (ENGINE::option('noreport')) return;
+        ENGINE::_report();
+    }
+
 
 
     static function relocate($link)
@@ -1163,14 +1195,13 @@ UA:"{{HTTP_USER_AGENT}}"', array('type' => 'session',
     {
         ENGINE::set_option('ajax', true);
         header('Content-type: application/json; charset=UTF-8');
-        $data = array();
         if ('POST' == $_SERVER['REQUEST_METHOD'] &&
             (array_key_exists('handler', $_POST) || !ENGINE::option('skip_post',false))
         ) {
             if (array_key_exists('handler', $_POST)) {
                 preg_match(
                     '/^([^:]*)::([^:]+)(?::([^:]+))?(?::([^:]+))?(?::([^:]+))?$/',
-                    $_POST['handler'], $m
+                    str_replace('%3A',':',$_POST['handler']), $m
                 );
                 if (empty($m[1])) {
                     $m[1] = 'Main';
@@ -1191,9 +1222,11 @@ UA:"{{HTTP_USER_AGENT}}"', array('type' => 'session',
             }
         } else {
             /*  --- point::BEFORE_GETDATA --- */
+
+        ENGINE::trigger_event('BEFORE_GETDATA');
+
             $data = self::getData();
         }
-        //ENGINE::debug('333',ENGINE::option('ajax'));
 
         $result = array('data' => $data);
         $x = ob_get_contents();
@@ -1212,9 +1245,16 @@ UA:"{{HTTP_USER_AGENT}}"', array('type' => 'session',
             $result = array_merge($result, $data);
         }
         $error = ENGINE::option('page.error');
-        if (!empty($error))
-            $result['error'] = utf8_encode($error);
-
+        if (!empty($error)) {
+            if(!isset($result['error']))$result['error']='';
+            $result['error'] .= utf8_encode($error);
+        }
+        $x = ob_get_contents();
+        $x .= trim(ENGINE::option('page.debug'));
+        if (!empty($x)) {
+            $result['debug'] = utf8_encode($x);
+        }
+        ob_end_clean();
         if (session_id() != "") {
             $result['session'] = array('name' => session_name(), 'value' => session_id());
         }
@@ -1242,21 +1282,40 @@ UA:"{{HTTP_USER_AGENT}}"', array('type' => 'session',
         return ENGINE::exec($x);
     }
 
+    static function headers(){
+        static $headers=array();
+        if (empty($headers)) {
+            if (is_callable('apache_request_headers')) {
+                $headers = apache_request_headers();
+            } else {
+                $headers=array();
+                foreach($_SERVER as $key=>$value) {
+                    if (substr($key,0,5)=="HTTP_") {
+                        $key=str_replace(" ","-",ucwords(strtolower(str_replace("_"," ",substr($key,5)))));
+                        $headers[$key]=$value;
+                    }else{
+                        $headers[$key]=$value;
+                    }
+                }
+            }
+        }
+        return $headers;
+    }
+
 static function action()
     {
+        try {
         ob_start();
         $error = ENGINE::option('session.page.error');
         if (!empty($error)) {
             ENGINE::set_option('session.page.error', '');
             ENGINE::error($error);
         }
-        if (is_callable('apache_request_headers')) {
-            $headers = apache_request_headers();
-        } else {
-            $headers = array();
-        }
-        //ENGINE::debug($headers);
-        if ((isset($headers['X-Requested-With']) && $headers['X-Requested-With']=='XMLHttpRequest') || isset($_GET['ajax']) || (isset($_POST) && isset($_POST['ajax']) && $_POST['ajax']=='iframe')) {
+            $headers=ENGINE::headers();
+
+            if ((isset($headers['X-Requested-With']) && $headers['X-Requested-With']=='XMLHttpRequest')
+                || isset($_GET['ajax'])
+                || (isset($_POST) && isset($_POST['ajax']))) {
             self::ajax_action();
             return;
         }
@@ -1272,8 +1331,9 @@ static function action()
             unset($_SESSION['SAVE_POST'],$_SESSION['SAVE_FILES']);
         }
 
-        if ('POST' == $_SERVER['REQUEST_METHOD'] &&
-            (array_key_exists('handler', $_POST) || !ENGINE::option('skip_post',false))) {
+            if ('POST' == self::_($_SERVER['REQUEST_METHOD']) &&
+                (array_key_exists('handler', $_POST) || ENGINE::option('skip_post',false))
+            ) {
             if (array_key_exists('handler', $_POST)) {
                 preg_match('/^([^:]*)::([^:]+)(?::([^:]+))?(?::([^:]+))?(?::([^:]+))?$/'
                     , $_POST['handler'], $m);
@@ -1293,6 +1353,8 @@ static function action()
         }
         /*  --- point::BEFORE_GETDATA --- */
 
+            ENGINE::trigger_event('BEFORE_GETDATA');
+
         $data = self::getData();
 
         $x = ENGINE::template(
@@ -1307,8 +1369,11 @@ static function action()
             $x = '<html><head><title>Oops</title></head><body>' . $x . '</body></html>';
         }
         echo $x;
-
-//        unset($_SESSION['errormsg']);
+        } catch (Exception $e) {
+            ENGINE::error($x = ENGINE::_t('Exception pending `{{msg}}`',
+                array('{{msg}}' => $e->getMessage())));
+            $x = '<html><head><title>Oops</title></head><body>' . $x . '</body></html>';
+        }
     }
 
 }
@@ -1377,38 +1442,6 @@ function array_clear_deep(&$tomerge, &$part)
     unset ($v);
     return $result;
 }
-
-
-
-spl_autoload_register('ENGINE::_autoload');
-
-
-
-/**
- * класс для хранения параметров в сессии
- */
-class engine_options_session
-{
-
-    function get($name)
-    {
-        if (ENGINE::$session_started)
-            return $_SESSION[$name];
-        else
-            return null;
-    }
-
-    function set($name, $value = null)
-    {
-        ENGINE::start_session();
-        if (empty($value))
-            unset($_SESSION[$name]);
-        else
-            $_SESSION[$name] = $value;
-    }
-
-}
-
 
 
 register_shutdown_function('ENGINE::_shutdown');

@@ -428,4 +428,9 @@ class scaner
         $this->position($till);
     }
 
+    function error($msg){
+        echo $msg.PHP_EOL;
+        return false;
+    }
+
 }

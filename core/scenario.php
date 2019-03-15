@@ -26,14 +26,18 @@ class scenario extends base
     function __get($name)
     {
         switch ($name) {
-            case 'scaner':
+/*            case 'scaner':
                 $this->$name = new scaner();
                 break;
             case 'spider':
                 $this->$name = new spider();
-                break;
+                break;*/
             default:
-                return null;
+                if(class_exists(__NAMESPACE__.'\\'.$name)) {
+                    $c=__NAMESPACE__.'\\'.$name;
+                    $this->$name = new $c();
+                } else
+                    return null;
         }
         return $this->$name;
     }

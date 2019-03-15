@@ -3,7 +3,14 @@
  * класс базы данных проекта. Вариант с mysqli драйвером
  * Внешние зависиости
  *  ENGINE::debug, ::error, ::option, ::cache
- * <%=POINT::get('hat','comment');%>
+ * ----------------------------------------------------------------------------------
+ * $Id: X-Site cms (2.0, LapsiTV build), written by Ksnk (sergekoriakin@gmail.com),
+ * ver: xxx, Last build: 1806091408
+ * status : draft build.
+ * GIT: origin	https://github.com/Ksnk/ENGINE.git (push)$
+ * ----------------------------------------------------------------------------------
+ * License MIT - Serge Koriakin - 2012-2018
+ * ----------------------------------------------------------------------------------
 
 
 
@@ -11,6 +18,8 @@
 
 
  */
+/*  --- point::ENGINE_namespace --- */
+//namespace Ksnk\model\database;
 
 /**
  * класс, собирающий длинный insertValues
@@ -150,8 +159,6 @@ class dbIterator implements Iterator
 
     /**
      * интерфейс - поддержка итератора. Перемотай дальше
-     *
-     * @return null
      */
     function next()
     {
@@ -271,9 +278,8 @@ class xDatabase_parent
      * - debug, nodebug(*)
      * - cache(*), nocache
      *
-     * @param string $option строка с параметраи, через пробел
+     * @param string|array $option строка с параметраи, через пробел
      *
-     * @return null
      */
     function set_option($option)
     {
@@ -299,10 +305,6 @@ class xDatabase_parent
             }
         }
 
-        /*        if(isset($prop['debug'])){
-                    ENGINE::debug('db debug:'.$prop['debug'],'~count|10');
-                }
-        */
         if (!empty($this->once_options)) {
             foreach ($this->once_options as $o => $val) {
                 $this->$o = $val;
@@ -378,7 +380,6 @@ class xDatabase_parent
     function selectRow()
     {
         $result = $this->_query(func_get_args(), true);
-        //ENGINE::debug($result);
         if (!$this->notempty($result)) {
             return false; //$result;
         }
@@ -426,7 +427,7 @@ class xDatabase_parent
      * @param string $name
      * @param bool $data
      *
-     * @return bool
+     * @return mixed
      */
     function cache($name, $data = false)
     {
@@ -452,7 +453,7 @@ class xDatabase_parent
     /**
      * Выбрать все из запроса, вернуть массив с инлексами.
      *
-     * @param int $idx параметр для ключика
+     * @param string $idx параметр для ключика
      *
      * @return array
      */
@@ -503,7 +504,7 @@ class xDatabase_parent
      * @param array $arg - Запрос + параметры запроса
      * @param string $options - опции запроса
      *
-     * @return resource
+     * @return mixed
      */
     protected function _query($arg, $options = '')
     {
@@ -528,7 +529,6 @@ class xDatabase_parent
      *
      * @param string $sql собственно дамп
      *
-     * @return null
      */
     public function sql_dump($sql)
     {
@@ -545,7 +545,6 @@ class xDatabase_parent
      *
      * @param $query
      *
-     * @return mixed
      */
     function query($query)
     {
@@ -608,7 +607,7 @@ class xDatabase_parent
         $format = $args[0];
         $cnt = 1;
         $start = 0;
-        while (preg_match('/(?<!\\\\)\?(\d*)([id\#ayxk_sq]|\[([^\]]+)\]|)/i'
+        while (preg_match('/(?<!\\\\)\?(\d*)([id\#ayxlk_sq]|\[([^\]]+)\]|)/i'
             , $format, $m, PREG_OFFSET_CAPTURE, $start)
         ) {
             $x = '';
@@ -644,7 +643,12 @@ class xDatabase_parent
                         break;
                     case 'i':
                     case 'd':
+                        if ('' === $args[$cur] ||(!is_numeric($args[$cur]) && !ctype_digit($args[$cur]))) {
+                            $this->error('Can\'t cast to ?d ' . str_replace('-->','-- >',var_export($args[$cur], true)));
+                            $x = 0;
+                        } else {
                         $x = (0 + $args[$cur]);
+                        }
                         break;
                     case 'x':
                         $x = $args[$cur];
@@ -728,8 +732,9 @@ class xDatabase_parent
  */
 class xDatabase extends xDatabase_parent
 {
-    public $_cache = true;
+    public $_cache = false;
     protected $c_count = 0;
+    protected $error_happen=false;
 
     protected
         $_host = 'localhost',
@@ -751,19 +756,19 @@ class xDatabase extends xDatabase_parent
      */
     function cache($name, $data = false, $time = 28800)
     {
-        if (!$this->_cache) {
-            return $data;
-        }
+       // return $data; /*
+        if (!$this->_cache) return $data;
         if (false === $data) {
-            if (false !== ($result = ENGINE::cache($name))) {
+            if ($this->_cache && false !== ($result = ENGINE::cache($name))) {
                 $this->c_count += 1;
+               // if(ENGINE::hasflag('cache')) ENGINE::debug($name, $result);
                 return unserialize($result);
             }
             return false;
         } else {
             ENGINE::cache($name, serialize($data), $time);
         }
-        return $data;
+        return $data;/**/
     }
 
     /**
@@ -780,7 +785,8 @@ class xDatabase extends xDatabase_parent
 
     function error($msg)
     {
-        ENGINE::error($msg);
+        $this->error_happen=true;
+        ENGINE::error($msg,array(),array('count'=>8));
     }
 }
 
@@ -792,6 +798,31 @@ class xDatabaseLapsii extends xDatabase
     /** @var bool|Memcache */
     // private $mcache = false;
     protected $_debug = false;
+
+    protected $tran_cnt=0;
+
+    function startTransaction(){
+        if($this->tran_cnt==0){
+            $this->query('start transaction;');
+        }
+        $this->tran_cnt++;
+    }
+
+    function commit(){
+        if($this->tran_cnt>=0)$this->tran_cnt--;
+        if($this->tran_cnt==0){
+            if($this->error_happen) {
+                $this->rollback();
+            } else
+                $this->query('commit;');
+        }
+    }
+
+    function rollback(){
+        $this->query('rollback;');
+        $this->error_happen=false;
+        $this->tran_cnt=0;
+    }
 
     function notempty($res)
     {
@@ -813,11 +844,11 @@ class xDatabaseLapsii extends xDatabase
      *
      * @param string $option параметры
      */
-    function __construct($option = '')
+    function __construct($option = '',$db_options=array())
     {
         parent::__construct($option);
-        //ENGINE::debug(ENGINE::slice_option('database.'));
-        $this->set_option(ENGINE::slice_option('database.'));
+        if(empty($db_options))$db_options=ENGINE::slice_option('database.');
+        $this->set_option($db_options);
         // if ($this->_init) {
         $this->db_link = @mysqli_connect(
             $this->_host,
@@ -826,7 +857,7 @@ class xDatabaseLapsii extends xDatabase
             $this->_base
         );
         if (empty($this->db_link) || mysqli_connect_error()) {
-            ENGINE::error(
+            $this->error(
                 'can\'t connect: (' . mysqli_connect_errno() . ') '
                 . mysqli_connect_error() . "\n" .
                 $this->_host . "\n" .
@@ -836,12 +867,12 @@ class xDatabaseLapsii extends xDatabase
             );
         }
 
-        //$this->prefix = ENGINE::option('database.prefix', 'xsite');
-        if ($option = ENGINE::option('database.options')) {
+
+        if (class_exists('ENGINE') && $option = ENGINE::option('database.options')) {
             $this->set_option($option);
         }
 
-        if ($this->_init) {
+        if ($this->_init && $this->db_link) {
             mysqli_set_charset($this->db_link, $this->_code);
         }
     }
@@ -857,13 +888,17 @@ class xDatabaseLapsii extends xDatabase
      */
     protected function _query($arg, $cached = false)
     {
+        if(!$this->db_link) return null;
         $start = 0;
         if ($this->_debug) {
             $start = microtime(true);
         }
         $sql = $this->_($arg);
         if ($cached) {
+            if(class_exists('ENGINE'))
             $this->cachekey = ENGINE::option('cache.prefix', 'x') . md5($sql);
+            else
+                $this->cachekey =  md5($sql);
             if (false !== ($result = $this->cache($this->cachekey))) {
                 if (false !== ($result = $this->cache($this->cachekey))) {
                     if ($this->_debug) {
@@ -888,7 +923,7 @@ class xDatabaseLapsii extends xDatabase
             $result = mysqli_query($this->db_link, $sql);
             //ENGINE::debug($result);
             if (!$result) {
-                ENGINE::error(
+                $this->error(
                     'Invalid query: ' . mysqli_error($this->db_link) . "\n" . 'Whole query: ' . $sql
                 );
             } else {
@@ -940,6 +975,8 @@ class xDatabaseLapsii extends xDatabase
      */
     function __destruct()
     {
+        if($this->error_happen && $this->tran_cnt>0)
+            $this->rollback();
         if (!empty($this->db_link)) {
             mysqli_close($this->db_link);
             $this->db_link = null;
@@ -965,7 +1002,7 @@ class xSphinxDB extends xDatabaseLapsii
             $this->_port
         );
         if (empty($this->db_link) || mysqli_connect_error()) {
-            ENGINE::error(
+            $this->error(
                 'can\'t connect: (' . mysqli_connect_errno() . ') '
                 . mysqli_connect_error() . "\n" .
                 $this->_host . "\n" .
@@ -1024,7 +1061,7 @@ class xDatabaseLapsi extends xDatabase
                 $this->_password
             );
             if (empty($this->db_link)) {
-                ENGINE::error(
+                $this->error(
                     'can\'t connect: '
                     . mysql_error() . "\n" .
                     $this->_host . "\n" .
@@ -1090,7 +1127,7 @@ class xDatabaseLapsi extends xDatabase
                 $result = mysql_query($sql, $this->db_link);
             //ENGINE::debug($result);
             if (!$result) {
-                ENGINE::error(
+                $this->error(
                     'Invalid query: ' . (!is_null($this->db_link)?mysql_error($this->db_link):mysql_error()) . "\n" . 'Whole query: ' . $sql
                 );
             } else {

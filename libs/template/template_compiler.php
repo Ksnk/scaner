@@ -113,8 +113,9 @@ class template_compiler
                 $name = basename($v, "." . $ext);
                 $phpn = self::options('PHP_PATH') . DIRECTORY_SEPARATOR . 'tpl_' . $name . '.php';
                 //echo($phpn.' '.$v);
+                $force=self::options('FORCE');
                 if (
-                    !''!=self::options('FORCE')
+                    !empty($force)
                     || !file_exists($phpn)
                     || (max($xtime, filemtime($v)) > filemtime($phpn))
                 ) {
