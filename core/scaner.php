@@ -26,6 +26,11 @@ class scaner
      */
     const GUARD_STRLEN = 4096;
 
+    /**
+     * Читаем и дочитываем из файла вот такими кусками
+     */
+    const NL = "\n"; // символ новой сроки
+
     /** @var string */
     protected $buf;
 
@@ -36,19 +41,22 @@ class scaner
     private $tail = '';
 
     /** @var boolean - признак успешности только что вызванной функции scan */
-    var $found = false;
+    var $found = false,
+
+        $filestart = 0;
 
     /** @var integer */
     private
         $result,
 
-        $filestart = 0,
-
         $till = -1,
 
         $start;
 
-    var $finish = 0;
+    var $finish = 0,
+
+    /** @var array - массив нумерации строк */
+        $lines=array();
 
     /**
      * Выдать результат работы функций сканирования.
@@ -74,7 +82,7 @@ class scaner
     function newbuf($buf)
     {
         if (is_array($buf)) { // source from `file` function
-            $buf = implode("\n", $buf);
+            $buf = implode(self::NL, $buf);
         }
         $this->buf = $buf; // run the new scan
         $this->start = 0;
@@ -129,12 +137,27 @@ class scaner
     }
 
     /**
+     * заполняем массив начал строк
+     */
+    function refillNL(){
+        static $lastline; if(!isset($lastline)) $lastline=0;
+        preg_match_all('/$/m', $this->buf, $m, PREG_OFFSET_CAPTURE);
+        if(isset($this->lines[$this->filestart+$m[0][0][1]])) {
+            $lastline = $this->lines[$this->filestart+$m[0][0][1]];
+        }
+        foreach ($m[0] as $k => $v) {
+            $this->lines[$this->filestart+$v[1]] = ++$lastline;
+        }
+    }
+
+    /**
      * дочитываем буфер, если надо
      * @param bool $force - проверять граничный размер
-     * @return bool - последний ли это препаре или нет todo: непонятно накой такой результат нужен
+     * @return bool - последний ли это препаре или нет
      */
     protected function prepare($force = true)
     {
+        // если в буфере остается ДОСТАТОЧНОЕ количество символов - ничего не делаем
         if (!$force && strlen($this->buf) - self::GUARD_STRLEN >= $this->start)
             return false;
 
@@ -147,14 +170,16 @@ class scaner
                 $this->buf .= fread($this->handle, self::BUFSIZE);
                 $this->tail = '';
                 if (!feof($this->handle)) {
-                    $x = strrpos($this->buf, "\n");
-                    if (false !== $x) {
+                    // откусываем последнюю, возможно незавершенную строку буфера, если строка не очень большая
+                    $x = strrpos($this->buf, self::NL);
+                    if (false !== $x && self::GUARD_STRLEN>(strlen($this->buf)-$x)) {
                         $this->tail = substr($this->buf, $x + 1);
                         $this->buf = substr($this->buf, 0, $x);
                     }
                 }
 
-                $this->filestart += $this->start;
+                $this->filestart += ($this->start+1);
+                $this->refillNL();
                 $this->start = 0;
                 return true;
             }
@@ -175,7 +200,7 @@ class scaner
             return $this;
         }
 
-        $x = strpos($this->buf, "\n", $this->start);
+        $x = strpos($this->buf, self::NL, $this->start);
 
         if (false === $x) {
             $this->result[] = substr($this->buf, $this->start);
@@ -227,6 +252,34 @@ class scaner
         return $this;
     }
 
+    function regit($reg)
+    {
+        $this->prepare(false);
+
+        do {
+            $found = preg_match($reg, $this->buf, $m, PREG_OFFSET_CAPTURE, $this->start);
+            if (!$found && !empty($this->handle) && !feof($this->handle)) {
+                $x = strrpos($this->buf, self::NL);
+                if (false === $x) {
+                    $this->start = strlen($this->buf);
+                } else {
+                    $this->start = $x;
+                }
+                if ($this->prepare()) {
+                    continue;
+                } else {
+                    break;
+                }
+            } else {
+                $this->start=$m[0][1]+strlen($m[0][0]);
+                break;
+            }
+        } while (true);
+        if(!$found)
+            return false;
+        else
+            return $m;
+    }
     /**
      * scan buffer till pattern not found
      * @param $reg
@@ -276,19 +329,19 @@ class scaner
                         break;
                     }
                     $this->found = true;
-                    $x = strpos($this->buf, "\n", $y + strlen($reg));
+                    $x = strpos($this->buf, self::NL, $y + strlen($reg));
                     if (false === $x)
                         $this->start = strlen($this->buf);
                     else
                         $this->start = $x - 1;
-                    $xx = strrpos($this->buf, "\n", $y - strlen($this->buf));
-                    // echo $xx,' ',$y,' ',$this->start,"\n";
+                    $xx = strrpos($this->buf, self::NL, $y - strlen($this->buf));
+                    // echo $xx,' ',$y,' ',$this->start,self::NL;
                     $this->result[] = substr($this->buf, $xx, $this->start - $xx);
                 }
             }
             if (!$this->found && !empty($this->handle) && !feof($this->handle)) { //3940043
                 // $this->start=strlen($this->buf);
-                $x = strrpos($this->buf, "\n");
+                $x = strrpos($this->buf, self::NL);
                 if (false === $x) {
                     $this->start = strlen($this->buf);
                 } else {
@@ -326,8 +379,8 @@ class scaner
     function getline()
     {
         if ($this->start == 0) $x = 0;
-        else $x = strrpos($this->buf, "\n", $this->start - strlen($this->buf));
-        $y = strpos($this->buf, "\n", $this->start);
+        else $x = strrpos($this->buf, self::NL, $this->start - strlen($this->buf));
+        $y = strpos($this->buf, self::NL, $this->start);
         if (false === $x) $x = 0; else $x++;
         if (false === $y) return substr($this->buf, $x);
         return substr($this->buf, $x, $y - $x);
@@ -410,20 +463,32 @@ class scaner
             $till = $this->till;
         }
         $this->prepare(false);
-        while (preg_match($pattern, $this->buf, $m, PREG_OFFSET_CAPTURE, $this->start)) {
-            if ($this->filestart + $m[0][1] + strlen($m[0][0]) > $till) {
-                break;
-            }
+        while(true) {
+            $skiped='';
+            while ($found=preg_match($pattern, $this->buf, $m, PREG_OFFSET_CAPTURE, $this->start)) {
             $skiped = substr($this->buf, $this->start, $m[0][1] - $this->start);
             $this->start = $m[0][1] + strlen($m[0][0]);
-            $r = array('_skiped' => trim($skiped));
+                if ($this->filestart + $this->start > $till) {
+                    $this->start=$m[0][1]; // не терять тег на границе буфера todo: oppa! строка то фиксированной длниы?
+                    break;
+                }
+                $r = array('_skiped' => $skiped);
+                $skiped='';
             foreach ($idx as $i => $v) {
                 if (isset($m[$i]) && !empty($i)) {
                     $r[$idx[$i]] = trim($m[$i][0], "\n\r ");
                 }
             }
-            if (false === $callback($r)) break;
-            $this->prepare(false);
+                if (false === $callback($r)) break 2;
+            }
+            if(''!=$skiped){
+                if (false === $callback(array('_skiped' => $skiped))) break;
+            } else if(!$found){
+                $skiped = substr($this->buf, $this->start);
+                $this->start=strlen($this->buf);
+                if (false === $callback(array('_skiped' => $skiped))) break;
+            }
+            if(!$this->prepare(false)) break;
         }
         $this->position($till);
     }

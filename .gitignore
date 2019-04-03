@@ -1,0 +1,5 @@
+/vendor/*
+/lapsiBuild/*
+config.*
+*.phar
+*.lock
