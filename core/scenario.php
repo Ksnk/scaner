@@ -2,6 +2,8 @@
 
 namespace Ksnk\scaner;
 
+use \Ksnk\scaner\base;
+
 class scenario extends base
 {
     /**
