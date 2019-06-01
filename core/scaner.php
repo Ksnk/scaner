@@ -8,7 +8,7 @@ namespace Ksnk\scaner;
  *
  * Читает файл в буфер. Анализ файла идет регулярками. когда "курсор" чтения
  * доходит до граница прочитанного буфера - файл дочитывается, буфер смещается.
- * Базовый сервис сканироввания с помощью регулярок и рудиментарно-простой синтаксиеский анализ
+ * Базовый сервис сканирования и парсинга с помощью регулярок и рудиментарно-простой синтаксический анализ
  *
  * Class scaner
  */
@@ -420,8 +420,10 @@ class scaner
 
         if ($this->found) {
             $this->till = $this->reg_begin;//'$this->filestart+$this->start;
-            $this->position($oldstart);
+        }else {
+            $this->till = -1  ;
         }
+        $this->position($oldstart);
         $this->found = $f;
         $this->result = $res;
         return $this;

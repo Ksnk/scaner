@@ -3,14 +3,13 @@
  *  анализатор логов
  */
 
-
 /**
  * Читалка длинных логов. Греп по IP.
  * Class grep_logs_scenario
  * @property scaner $scaner
  * @tags lapsi
  */
-class grep_logs_scenario extends scenario
+class grep_logs_scenario extends Ksnk\scaner\scenario
 {
 
     /**
@@ -20,7 +19,7 @@ class grep_logs_scenario extends scenario
      * @param string $text :text текст для поиска
      */
 
-    function do_scanlog($log,$pattern,$text){
+    function do_scanlog($log,$pattern,$text=''){
         $this->scaner->newhandle($log);$reg1='';
         if(!empty($text)) $reg1=$text;
         if(!empty($pattern)) $reg='~'.preg_quote($pattern).'[^\n]+~';
@@ -35,7 +34,7 @@ class grep_logs_scenario extends scenario
                 $result=$this->scaner->getresult();
                 $result=$result[0];
                 if(preg_match($reg1,$result) || preg_match($reg2,$result)) continue;
-                echo $result;
+                echo $result. PHP_EOL;
             } else
                 break;
         } while (true);
