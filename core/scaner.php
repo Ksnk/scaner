@@ -8,7 +8,7 @@ namespace Ksnk\scaner;
  *
  * Читает файл в буфер. Анализ файла идет регулярками. когда "курсор" чтения
  * доходит до граница прочитанного буфера - файл дочитывается, буфер смещается.
- * Базовый сервис сканироввания с помощью регулярок и рудиментарно-простой синтаксиеский анализ
+ * Базовый сервис сканирования и парсинга с помощью регулярок и рудиментарно-простой синтаксический анализ
  *
  * Class scaner
  */
@@ -24,25 +24,29 @@ class scaner
      * Гарантируем такое пространство от курсора чтения до конца буфера.
      * Фактически - ограничение сверху на длину строки
      */
-    const GUARD_STRLEN = 4096;
+    const GUARD_STRLEN = 12000;
 
     /**
-     * Читаем и дочитываем из файла вот такими кусками
      */
     const NL = "\n"; // символ новой сроки
 
-    /** @var string */
+
+    /**
+     * Буфер чтения
+     * @var string
+     */
     protected $buf;
 
     /** @var int - позиция начала совпадения регулярки для функции scan */
     public $reg_begin;
 
-    /** @var string */
+    /** @var string - служебная, хвост от предыдущей операции*/
     private $tail = '';
 
     /** @var boolean - признак успешности только что вызванной функции scan */
     var $found = false,
 
+    /** @var int - позиция начала буфера чтения в файле */
         $filestart = 0;
 
     /** @var integer */
@@ -51,12 +55,15 @@ class scaner
 
         $till = -1,
 
+    /** @var int - позиция курсора чтения в буфере */
         $start;
 
     var $finish = 0,
 
     /** @var array - массив нумерации строк */
-        $lines=array();
+        $lines=array(),
+    /** @var int $lastline - дочитали от начала файла до такой строки*/
+        $lastline;
 
     /**
      * Выдать результат работы функций сканирования.
@@ -75,8 +82,8 @@ class scaner
     }
 
     /**
-     * Строка для анализа
-     * @param $buf
+     * Поместить строку в буфер анализа. Нефайловый сканер
+     * @param $buf - Строка для анализа
      * @return $this
      */
     function newbuf($buf)
@@ -85,14 +92,25 @@ class scaner
             $buf = implode(self::NL, $buf);
         }
         $this->buf = $buf; // run the new scan
-        $this->start = 0;
         $this->finish = strlen($buf);
-        $this->till = -1;
-        $this->result = array();
-        $this->filestart = 0;
+        $this->reset();
         return $this;
     }
 
+    /**
+     * Сброс сканера для обработки следующего буфера
+     */
+    function reset(){
+        $this->start = 0;
+        $this->lastline = 0;
+        $this->till = -1;
+        $this->result = array();
+        $this->filestart = 0;
+    }
+
+    /**
+     * чистим хвосты
+     */
     function __destruct()
     {
         if (!empty($this->handle)) {
@@ -127,26 +145,22 @@ class scaner
             }
         }
 
-        $this->handle = $handle; // run the new scan
-        $this->start = 0;
-        $this->till = -1;
-        $this->filestart = 0;
+        $this->handle = $handle; // sign a new scan
         $this->buf = '';
-        $this->result = array();
+        $this->reset();
         return $this;
     }
 
     /**
-     * заполняем массив начал строк
+     * заполняем массив начал строк. Заполняем по мере дочтения файла.
      */
     function refillNL(){
-        static $lastline; if(!isset($lastline)) $lastline=0;
         preg_match_all('/$/m', $this->buf, $m, PREG_OFFSET_CAPTURE);
         if(isset($this->lines[$this->filestart+$m[0][0][1]])) {
-            $lastline = $this->lines[$this->filestart+$m[0][0][1]];
+            $this->lastline = $this->lines[$this->filestart+$m[0][0][1]];
         }
         foreach ($m[0] as $k => $v) {
-            $this->lines[$this->filestart+$v[1]] = ++$lastline;
+            $this->lines[$this->filestart+$v[1]] = ++$this->lastline;
         }
     }
 
@@ -292,20 +306,21 @@ class scaner
         do {
             $this->found = false;
 
-            if ($reg{0} == '/' || $reg{0} == '~') { // so it's a regular expresion
+            if ($reg{0} == '/' || $reg{0} == '~' ) { // so it's a regular expresion
                 $res = preg_match($reg, $this->buf, $m, PREG_OFFSET_CAPTURE, $this->start);
                 if ($res) {
                     if ($this->till <= 0 || $this->finish < $this->till)
                         $till = $this->finish;
                     else
                         $till = $this->till;
-                    if ($this->filestart + $m[0][1] + strlen($m[0][0]) > $till) {
+                    $plen=isset($m['fin'])?$m['fin'][1]:$m[0][1] + strlen($m[0][0]);
+                    if ($this->filestart +$plen > $till) {
                         $this->found = false;
                         break;
                     } else {
                         $this->reg_begin = $this->filestart + $m[0][1];
                         $this->found = true;
-                        $this->start = $m[0][1] + strlen($m[0][0]);
+                        $this->start = $plen;
                         $args = func_get_args();
                         array_shift($args);
                         while (count($args) > 0) {
@@ -405,8 +420,10 @@ class scaner
 
         if ($this->found) {
             $this->till = $this->reg_begin;//'$this->filestart+$this->start;
-            $this->position($oldstart);
+        }else {
+            $this->till = -1  ;
         }
+        $this->position($oldstart);
         $this->found = $f;
         $this->result = $res;
         return $this;
@@ -447,7 +464,7 @@ class scaner
     function syntax($tokens, $pattern, $callback)
     {
         // so build a reg
-        $idx = array(0);
+        $idx = array(0,'_skiped');
         while (preg_match('/:(\w+):/', $pattern, $m, PREG_OFFSET_CAPTURE)) {
             if (!isset($tokens[$m[1][0]])) break;
             $idx[] = $m[1][0];
@@ -466,19 +483,19 @@ class scaner
         while(true) {
             $skiped='';
             while ($found=preg_match($pattern, $this->buf, $m, PREG_OFFSET_CAPTURE, $this->start)) {
-            $skiped = substr($this->buf, $this->start, $m[0][1] - $this->start);
-            $this->start = $m[0][1] + strlen($m[0][0]);
+                $skiped = substr($this->buf, $this->start, $m[0][1] - $this->start);
+                $this->start = isset($m['fin'])?$m['fin'][1]:$m[count($idx)][1];
                 if ($this->filestart + $this->start > $till) {
                     $this->start=$m[0][1]; // не терять тег на границе буфера todo: oppa! строка то фиксированной длниы?
                     break;
                 }
                 $r = array('_skiped' => $skiped);
                 $skiped='';
-            foreach ($idx as $i => $v) {
-                if (isset($m[$i]) && !empty($i)) {
-                    $r[$idx[$i]] = trim($m[$i][0], "\n\r ");
+                foreach ($idx as $i => $v) {
+                    if (isset($m[$i]) && !empty($i)) {
+                        $r[$idx[$i]] = trim($m[$i][0], "\n\r ");
+                    }
                 }
-            }
                 if (false === $callback($r)) break 2;
             }
             if(''!=$skiped){
