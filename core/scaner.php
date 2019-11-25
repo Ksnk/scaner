@@ -24,7 +24,7 @@ class scaner
      * Гарантируем такое пространство от курсора чтения до конца буфера.
      * Фактически - ограничение сверху на длину строки
      */
-    const GUARD_STRLEN = 12000;
+    const GUARD_STRLEN = 20000;
 
     /**
      */
@@ -35,7 +35,7 @@ class scaner
      * Буфер чтения
      * @var string
      */
-    protected $buf;
+    var $buf;
 
     /** @var int - позиция начала совпадения регулярки для функции scan */
     public $reg_begin;
@@ -47,16 +47,16 @@ class scaner
     var $found = false,
 
     /** @var int - позиция начала буфера чтения в файле */
-        $filestart = 0;
+        $filestart = 0,
+
+        /** @var int - позиция курсора чтения в буфере */
+        $start;
 
     /** @var integer */
     private
         $result,
 
-        $till = -1,
-
-    /** @var int - позиция курсора чтения в буфере */
-        $start;
+        $till = -1;
 
     var $finish = 0,
 
@@ -92,7 +92,7 @@ class scaner
             $buf = implode(self::NL, $buf);
         }
         $this->buf = $buf; // run the new scan
-        $this->finish = strlen($buf);
+        $this->finish = mb_strlen($buf, '8bit');
         $this->reset();
         return $this;
     }
@@ -172,27 +172,27 @@ class scaner
     protected function prepare($force = true)
     {
         // если в буфере остается ДОСТАТОЧНОЕ количество символов - ничего не делаем
-        if (!$force && strlen($this->buf) - self::GUARD_STRLEN >= $this->start)
-            return false;
+        if (!$force && mb_strlen($this->buf,'8bit') - self::GUARD_STRLEN >= $this->start)
+            return 0;
 
         if (!empty($this->handle)) {
             if (!feof($this->handle)) {
-                if ($this->start >= strlen($this->buf)) {
+                if ($this->start >= mb_strlen($this->buf,'8bit')) {
                     $this->buf = $this->tail;
                 } else
-                    $this->buf = substr($this->buf, $this->start + 1) . $this->tail;
+                    $this->buf = mb_substr($this->buf, $this->start , null,'8bit') . $this->tail;
                 $this->buf .= fread($this->handle, self::BUFSIZE);
                 $this->tail = '';
                 if (!feof($this->handle)) {
                     // откусываем последнюю, возможно незавершенную строку буфера, если строка не очень большая
-                    $x = strrpos($this->buf, self::NL);
-                    if (false !== $x && self::GUARD_STRLEN>(strlen($this->buf)-$x)) {
-                        $this->tail = substr($this->buf, $x + 1);
-                        $this->buf = substr($this->buf, 0, $x);
+                    $x = mb_strrpos($this->buf, self::NL,0,'8bit');
+                    if (false !== $x && self::GUARD_STRLEN>(mb_strlen($this->buf,'8bit')-$x)) {
+                        $this->tail = mb_substr($this->buf, $x + 1, null,'8bit');
+                        $this->buf = mb_substr($this->buf, 0, $x,'8bit');
                     }
                 }
 
-                $this->filestart += ($this->start+1);
+                $this->filestart += $this->start;
                 $this->refillNL();
                 $this->start = 0;
                 return true;
@@ -209,16 +209,16 @@ class scaner
         $this->found = true;
         $move = false;
         $this->prepare(false);
-        if (strlen($this->buf) <= $this->start && !$move) {
+        if (mb_strlen($this->buf,'8bit') <= $this->start && !$move) {
             $this->found = false;
             return $this;
         }
 
-        $x = strpos($this->buf, self::NL, $this->start);
+        $x = mb_strpos($this->buf, self::NL, $this->start,'8bit');
 
         if (false === $x) {
-            $this->result[] = substr($this->buf, $this->start);
-            $this->start = strlen($this->buf);
+            $this->result[] = mb_substr($this->buf, $this->start,null,'8bit');
+            $this->start = mb_strlen($this->buf,'8bit');
         } else {
             if ($this->till <= 0 || $this->finish < $this->till)
                 $till = $this->finish;
@@ -227,7 +227,7 @@ class scaner
             if ($this->filestart + $x + 1 > $till) {
                 $this->found = false;
             } else {
-                $this->result[] = substr($this->buf, $this->start, $x - $this->start);
+                $this->result[] = mb_substr($this->buf, $this->start, $x - $this->start,'8bit');
                 $this->start = $x + 1;
             }
         }
@@ -251,7 +251,7 @@ class scaner
     function position($pos)
     {
         if (!empty($this->handle)) {
-            if ($this->filestart <= $pos && (strlen($this->buf) + $this->filestart) > $pos) {
+            if ($this->filestart <= $pos && (mb_strlen($this->buf,'8bit') + $this->filestart) > $pos) {
                 $this->start = $pos - $this->filestart;
             } else {
                 fseek($this->handle, $pos);
@@ -273,9 +273,9 @@ class scaner
         do {
             $found = preg_match($reg, $this->buf, $m, PREG_OFFSET_CAPTURE, $this->start);
             if (!$found && !empty($this->handle) && !feof($this->handle)) {
-                $x = strrpos($this->buf, self::NL);
+                $x = mb_strrpos($this->buf, self::NL, 0,'8bit');
                 if (false === $x) {
-                    $this->start = strlen($this->buf);
+                    $this->start = mb_strlen($this->buf,'8bit');
                 } else {
                     $this->start = $x;
                 }
@@ -285,7 +285,7 @@ class scaner
                     break;
                 }
             } else {
-                $this->start=$m[0][1]+strlen($m[0][0]);
+                $this->start=$m[0][1]+mb_strlen($m[0][0],'8bit');
                 break;
             }
         } while (true);
@@ -313,7 +313,7 @@ class scaner
                         $till = $this->finish;
                     else
                         $till = $this->till;
-                    $plen=isset($m['fin'])?$m['fin'][1]:$m[0][1] + strlen($m[0][0]);
+                    $plen=isset($m['fin'])?$m['fin'][1]:$m[0][1] + mb_strlen($m[0][0],'8bit');
                     if ($this->filestart +$plen > $till) {
                         $this->found = false;
                         break;
@@ -337,28 +337,28 @@ class scaner
                     }
                 }
             } else { // it's a plain text
-                $y = stripos($this->buf, trim($reg), $this->start);
+                $y = mb_stripos($this->buf, trim($reg), $this->start, '8bit');
                 if (false !== $y) {
-                    if ($this->till > 0 && $this->filestart + $y + strlen($reg) > $this->till) {
+                    if ($this->till > 0 && $this->filestart + $y + mb_strlen($reg,'8bit') > $this->till) {
                         $this->position($this->till);
                         break;
                     }
                     $this->found = true;
-                    $x = strpos($this->buf, self::NL, $y + strlen($reg));
+                    $x = mb_strpos($this->buf, self::NL, $y + mb_strlen($reg,'8bit'), '8bit');
                     if (false === $x)
-                        $this->start = strlen($this->buf);
+                        $this->start = mb_strlen($this->buf,'8bit');
                     else
                         $this->start = $x - 1;
-                    $xx = strrpos($this->buf, self::NL, $y - strlen($this->buf));
+                    $xx = mb_strrpos($this->buf, self::NL, $y - mb_strlen($this->buf,'8bit'), '8bit');
                     // echo $xx,' ',$y,' ',$this->start,self::NL;
-                    $this->result[] = substr($this->buf, $xx, $this->start - $xx);
+                    $this->result[] = mb_substr($this->buf, $xx, $this->start - $xx, '8bit');
                 }
             }
             if (!$this->found && !empty($this->handle) && !feof($this->handle)) { //3940043
-                // $this->start=strlen($this->buf);
-                $x = strrpos($this->buf, self::NL);
+                // $this->start=mb_strlen($this->buf,'8bit');
+                $x = mb_strrpos($this->buf, self::NL, 0, '8bit');
                 if (false === $x) {
-                    $this->start = strlen($this->buf);
+                    $this->start = mb_strlen($this->buf,'8bit');
                 } else {
                     $this->start = $x;
                 }
@@ -394,11 +394,11 @@ class scaner
     function getline()
     {
         if ($this->start == 0) $x = 0;
-        else $x = strrpos($this->buf, self::NL, $this->start - strlen($this->buf));
-        $y = strpos($this->buf, self::NL, $this->start);
+        else $x = mb_strrpos($this->buf, self::NL, $this->start - mb_strlen($this->buf,'8bit'), '8bit');
+        $y = mb_strpos($this->buf, self::NL, $this->start, '8bit');
         if (false === $x) $x = 0; else $x++;
-        if (false === $y) return substr($this->buf, $x);
-        return substr($this->buf, $x, $y - $x);
+        if (false === $y) return mb_substr($this->buf, $x, null,'8bit');
+        return mb_substr($this->buf, $x, $y - $x,'8bit');
     }
 
     /**
@@ -470,9 +470,9 @@ class scaner
             $idx[] = $m[1][0];
             if (is_string($tokens[$m[1][0]])) $tokens[$m[1][0]] = array($tokens[$m[1][0]]);
             $pattern =
-                substr($pattern, 0, $m[0][1]) .
+                mb_substr($pattern, 0, $m[0][1], '8bit') .
                 '(' . implode('|', $tokens[$m[1][0]]) . ')' .
-                substr($pattern, $m[0][1] + strlen($m[0][0]));
+                mb_substr($pattern, $m[0][1] + mb_strlen($m[0][0],'8bit'), '8bit');
         }
         if ($this->till < 0) {
             $till = $this->finish;
@@ -483,7 +483,7 @@ class scaner
         while(true) {
             $skiped='';
             while ($found=preg_match($pattern, $this->buf, $m, PREG_OFFSET_CAPTURE, $this->start)) {
-                $skiped = substr($this->buf, $this->start, $m[0][1] - $this->start);
+                $skiped = mb_substr($this->buf, $this->start, $m[0][1] - $this->start, '8bit');
                 $this->start = isset($m['fin'])?$m['fin'][1]:$m[count($idx)][1];
                 if ($this->filestart + $this->start > $till) {
                     $this->start=$m[0][1]; // не терять тег на границе буфера todo: oppa! строка то фиксированной длниы?
@@ -501,8 +501,8 @@ class scaner
             if(''!=$skiped){
                 if (false === $callback(array('_skiped' => $skiped))) break;
             } else if(!$found){
-                $skiped = substr($this->buf, $this->start);
-                $this->start=strlen($this->buf);
+                $skiped = mb_substr($this->buf, $this->start, null, '8bit');
+                $this->start=mb_strlen($this->buf,'8bit');
                 if (false === $callback(array('_skiped' => $skiped))) break;
             }
             if(!$this->prepare(false)) break;

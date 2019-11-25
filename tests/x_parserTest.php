@@ -6,7 +6,7 @@
  * Time: 21:01
  */
 
-include_once 'd:/projects/rfbr/vendor/autoload.php';
+use \Ksnk\scaner\x_parser;
 
 class x_parserTest extends PHPUnit_Framework_TestCase {
 
@@ -25,11 +25,23 @@ class x_parserTest extends PHPUnit_Framework_TestCase {
 
         $this->assertEquals(
             str_replace("\r","","array (
+  'tags' =>
+  array (
+    0 => 'unknown',
+  ),
   'x_parserTest' =>
   array (
     'justforTest' =>
     array (
       'title' => '',
+      'description' =>
+      array (
+        0 => '
+ ',
+        1 => 'param integer \$a : select[1:a|2:b|3:c]  А вот!
+',
+        2 => '',
+      ),
       'param' =>
       array (
         'a' =>
@@ -57,13 +69,13 @@ class x_parserTest extends PHPUnit_Framework_TestCase {
     function testCreateinput(){
         $par=x_parser::getParameters('justforTest',__CLASS__);
         $this->assertEquals(
-            '<label>А вот!<select name="x_parserTest::justforTest[a]"><option value="1">a</option><option selected value="2">b</option><option value="3">c</option></select></label>',
+            '<label>А вот!<select name="x_parserTest::justforTest[a]"><option value="1">a</option><option value="2" selected>b</option><option value="3">c</option></select></label>',
             x_parser::createInput($par[__CLASS__]['justforTest']['param']['a'],array(
                 'x_parserTest::justforTest'=>array('a'=>2)
             ))
         );
         $this->assertEquals(
-            '<label>А вот!<select name="x_parserTest::justforTest[a]"><option value="1">a</option><option value="2">b</option><option selected value="3">c</option></select></label>',
+            '<label>А вот!<select name="x_parserTest::justforTest[a]"><option value="1">a</option><option value="2">b</option><option value="3" selected>c</option></select></label>',
             x_parser::createInput($par[__CLASS__]['justforTest']['param']['a'])
         );
     }

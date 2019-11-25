@@ -34,6 +34,9 @@ class x_parser {
         'file'=>'<div class="upload"><label class="file_upload dropzone">
     <input type="file" name="<?= $file_uploader_name ?>[]" multiple="multiple">
 </label></div>',
+        'select_option' => '<option value="{{value}}"{{selected}}>{{label}}</option>',
+        'select' => '<label>{{label}}<select name="{{name}}">{{radio}}</select></label>',
+
     );
 
     static private $UID_CNT=1000;
@@ -131,7 +134,6 @@ class x_parser {
                 }
 
                 $selected=($value==$k?' selected':'');
-
                 $result.=self::tpl(array(
                     'name'=>$opt['name'],
                     'label'=>$v,

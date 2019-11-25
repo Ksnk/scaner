@@ -8,115 +8,165 @@
 
 namespace Ksnk\scaner;
 
-include_once '../autoload.php';
-\Autoload::map(['Ksnk\scaner'=>'']);
-
-
 /**
  * Class csv
  * @package Ksnk\scaner
  * читатель csv, возможно в не той кодировке, возможно с нетеми делимитерами и нетеми обрамлениями
  */
-class csv extends scaner {
+class csv extends scaner
+{
+
+    const BOM = "\xEF\xBB\xBF"; // utf-8
+    const LE16 = "\xFF\xFE"; // utf-16
+
+    var $delim = ';',
+        $quote = '"',
+        $newline = '',
+        $detected = false,
+        $encoding = 'windows-1251',
+        $_reg;
+
+    function param($array)
+    {
+        foreach ($array as $k => $v) {
+            if (isset($this->{$k}))
+                $this->{$k} = $v;
+        }
+    }
 
     /**
      * функция выдает класс csv с правильно определенной кодировкой и делимитерами
      * @param $nameresource
-     * @param $titles - количество строк на заголовок.
+     * @param $headers - количество строк на заголовок.
      * @return csv
      */
-    static function getcsv($nameresource, $headers=1){
-        $class= new self();
+    static function getcsv($nameresource, $headers = 1)
+    {
+        ini_set("pcre.backtrack_limit", "2000000");
+        ini_set("pcre.recursion_limit",	"200000");
+        ini_set("pcre.jit",0);
+
+        $class = new self();
         $class->newhandle($nameresource);
-        // читаем 10 срок, определяем кодировку, делиметеры
-        // читаем 3 символа - не БОМ ли это
-        for ($i=0;$i<10;$i++) {
-            $class->line();
+
+        $class->prepare();
+        $buf = $class->getbuf();
+        if ($encoding = mb_detect_encoding($buf, 'utf-8', true)) {
+            $encoding = 'utf-8';
+        } else {
+            $encoding = 'cp1251';
         }
-        $buf = $class->getresult();
+        // первые 2-3 символа - не БОМ?
+        if (preg_match('~^(' . self::BOM . '|' . self::LE16 . ')~', $buf, $m)) {
+            if ($m[0] == self::BOM) {
+                $encoding = 'utf-8';
+                $class->position(3); //wtf? 3
+            } else {
+                $encoding = 'utf-16RLE';
+                $class->position(2);//wtf? 2
+            }
+        }
+        $the_start = $class->getpos();
+        foreach (['"', "'"] as $quote) foreach ([',', ";", "\t"] as $delim) {
+            $start = $the_start;
+            $cols = 0;
+            $rows = 0;
+            $row = 0;
+            $line = str_replace('"', $quote,
+                str_replace(',', $delim,
+                    '~(?:(")(?:[^"]|"")*"|.*?)(,|(\r\n|\n|\r))()~s'));
+            //if ($encoding == 'utf-8') $line .= 'u';
+            while (preg_match($line, $buf, $m, PREG_OFFSET_CAPTURE, $start)) {
+                if ($start != $m[0][1]) {
+                    // пропустили кусок текста, проблемы, однако
+                    continue 2;
+                }
+                if ($m[1][1]>0 && $quote != $m[1][0]) {
+                    // не подходит QUOTE
+                    continue 2;
+                }
+                if (!empty($m[3])) {
+                    // so newline
+                    if ($cols == 0) $cols = $row;
+                    else if (($cols == 0 && $row == 0) || $cols !== $row) {
+                        // количество столбцов разное
+                        continue 2;
+                    }
+                    $row = 0;
+                    if (++$rows > 6) {
+                        // проверка пройдена, заканчиваем
+                        $class->param([
+                            'delimiter' => $delim,
+                            'quote' => $quote,
+                            'encoding' => $encoding,
+                            'detected' => true
+                        ]);
+                        break 3;
+                    }
+                    $start = $m[3][1] + mb_strlen($m[3][0], '8bit');
+                    continue;
+                } else {
+                    $start = $m[2][1] + 1;
+                    if ($delim != $m[2][0]) {
+                        // не подходит DELIM.
+                        continue 2;
+                    }
+                }
+                $row++;
+            }
+        }
         return $class;
     }
 
 
-    function nextRow(){
-        return [1];
+    function nextRow()
+    {
+        if (empty($this->_reg)) {
+            $this->_reg = str_replace('"', $this->quote,
+                str_replace(',', $this->delim, '~(.*?)(,|(\r\n|\n|\r))()~s'));
+            if ($this->encoding == 'utf-8') $this->_reg .= 'u';
+        }
+        if(false===$this->prepare(false)) return [];
+        $cols = [];
+        $m=[];
+        while (
+            $this->buf{$this->start}==$this->quote
+            ||
+            preg_match($this->_reg, $this->buf, $m, PREG_OFFSET_CAPTURE, $this->start)) {
+            if(empty($m)){
+                // попытка прочитать поврежденный текст
+                $this->start++;$state=0;
+                do {
+                    if($state>2) break;
+                    if (!preg_match('~((?:' . $this->quote . '' . $this->quote . '|[^' . $this->quote . '])*)' . $this->quote . '(' . $this->delim . '|(\r\n|\n|\r))()~s', $this->buf, $m, PREG_OFFSET_CAPTURE, $this->start)) {
+                        if ($state == 0) {
+                            $this->prepare();
+                            $state++;
+                            continue;
+                        }
+                    }
+                    if(empty($m))
+                        preg_match('~(*?)(' . $this->delim . '|(\r\n|\n|\r))()~s', $this->buf, $m, PREG_OFFSET_CAPTURE, $this->start);
+                    if ($this->start != $m[0][1]) {
+                        // пропустили кусок текста, проблемы, однако
+                        $this->prepare();$state++;
+                        continue;
+                    }
+                    $col = preg_replace('/' . $this->quote . $this->quote . '/', $this->quote, $m[1][0]);
+                    break;
+                } while(true);
+            } else {
+
+                $col = $m[1][0];
+            }
+            if ($this->encoding != 'utf-8') $col = iconv($this->encoding, 'utf-8//ignore', $col);
+            $cols[] = $col;
+            $this->start = $m[4][1];
+            if ($m[3][1] >= 0) {
+                break;
+            }
+            $m=[];
+        }
+        return $cols;
     }
-}
-/**
-//decoding
-if(!mb_detect_encoding($content,'UTF-8', true)){
-    $content = @iconv('cp1251', "utf-8//IGNORE", $content);
-}
-// check delimiter
-// possible values , ; \t
-//$delimiter=',';
-
-$fh = fopen("php://temp", 'r+');
-fputs($fh, $content);
-rewind($fh);
-
-$db=ENGINE::db();
-$cnts=array(0,0,0,0,0,0);
-$cols=fgetcsv($fh,10000,$delimiter);fgetcsv($fh,10000,$delimiter);
-$minch=0;
-while($rows=fgetcsv($fh,10000,$delimiter)){
-    //$rows[1]=preg_replace('/\s+/',' ',$rows[1]);
-    if(preg_match('~^([0-9]{10,11})-[a-zA-Z0-9_-]+$~u',$rows[0],$m)){
-        $uriname=$rows[0];
-        $orginn=$m[1];
-        $cnts['x'.$m[1]]++;
-        $cnts[5]++;
-        $cnts['z_'.$uriname]++;
-    } else {
-        echo "<span style='color:red'>не паспорт</span>:".json_encode($rows,JSON_UNESCAPED_UNICODE)."<br>\n";
-        $cnts['not a passport']++; continue;
-    }
-    $r=$db->selectRow('select n.nid,n.status,n.changed, fd.field_dataset_title_value as name, organization.title as orgname, uid.field_dataset_id_value as datauid
-from node n
-left join field_data_field_organization org on n.nid = org.entity_id AND n.vid = org.revision_id
-left join field_data_field_dataset_id uid on n.nid = uid.entity_id AND n.vid = uid.revision_id
-left join  field_data_field_dataset_title as fd on fd.entity_id= n.nid AND n.vid = fd.revision_id
-left join node organization on organization.nid = org.field_organization_target_id
-where  n.type="dataset"
-    -- and fd.field_dataset_title_value like "%специально уполномоченных на решение задач в области защиты населения и территорий РФ%"
-    and uid.field_dataset_id_value=?
-    -- and fd.field_dataset_title_value="Сведения о местах нахождения органов, специально уполномоченных на решение задач в области защиты населения и территорий РФ от ЧС"'
-        ,$uriname );
-    if(!empty($r)){
-        $cnts['status_'.$r['status']]++;
-        $cnts[1]++;
-        $minch=$minch<=0?$r['changed']:min($minch,$r['changed']);
-        printf("[%s]%s - '%s'(%s)[%s]<br>\n", $r['status'],$r['orgname'],$r['name'],date("Y-m-d H:i:s",$r['changed']), $uriname);
-        $cnts[$r['orgname']]++;
-    } else {
-        $cnts[2]++;
-        printf("<span style='color:red'>не найдено!</span>  '%s'-%s<br>\n", $rows[1], $rows[2]);
-    }
-
-
-    // $files=$db->select('select file_managed where filename like %l', 'public://opendata/'.)
-    // public://opendata/7017069388-razcopsop/structure-2018-12-14T00-00-00
-
-    //print_r($rows);
-}
-echo ' обновление '.date("Y-m-d H:i:s",$minch)."<br>\n";
-echo '<pre>';
-$r=$cnts;
-foreach($cnts as $k=>&$c){
-    if(preg_match('/^z_/',$k) && $c==1){
-        unset($r[$k]);
-    }
-}
-print_r($r);
-echo '</pre>';
-fclose($fh);
-
-
-*/
-
-$csv=csv::getcsv('d:/projects/monitoring/csv/reestroi/data-20191112-structure-20171024.csv');
-$cnt=10;
-while($row=$csv->nextRow()){
-    print_r($row);
-    if($cnt-- <0) break;
 }

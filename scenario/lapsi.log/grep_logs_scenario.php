@@ -2,6 +2,7 @@
 /**
  *  анализатор логов
  */
+namespace Ksnk\scaner;
 
 /**
  * Читалка длинных логов. Греп по IP.
@@ -9,7 +10,7 @@
  * @property scaner $scaner
  * @tags lapsi
  */
-class grep_logs_scenario extends Ksnk\scaner\scenario
+class grep_logs_scenario extends scenario
 {
 
     /**
