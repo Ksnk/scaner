@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <script src="svg.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+</head>
+
+<body>
+<div id="drawing"></div>
+<div id="testing" style="border:1px solid red;width:100%;height:600px; background: no-repeat center/80%;"></div>
+
+</body>
+<script>
+    var engine= {
+		/**
+		 * based on bezier-spline.js
+		 * from here https://www.particleincell.com/2012/bezier-splines/
+		 */
+		splice: function (rpr, draw)
+            {
+                /*computes spline control points*/
+                function updateSplines(V) {
+                    /*grab (x,y) coordinates of the control points*/
+                    var x = [], i = 0, y = [];
+                    for (; i < V.length; i += 1) {
+                        /*use parseInt to convert string to int*/
+                        x[i] = V[i][0];
+                        y[i] = V[i][1];
+                    }
+
+                    /*computes control points p1 and p2 for x and y direction*/
+                    var px = computeControlPoints(x),
+                        py = computeControlPoints(y);
+
+                    /*updates path settings, the browser will draw the new spline*/
+                    for (i = 0; i < py.p1.length; i++) {
+                        var path = draw.path(
+                            "M " + x[i] + " " + y[i] + " C " + px.p1[i] + " " + py.p1[i] + " " + px.p2[i] + " " + py.p2[i] + " " + x[i + 1] + " " + y[i + 1]
+                        );
+                        path.fill('none');
+                        path.stroke({color: '#f06', width: 4, linecap: 'round', linejoin: 'round'});
+                    }
+                }
+
+                /*computes control points given knots K, this is the brain of the operation*/
+                function computeControlPoints(K) {
+                    var p1 = [],
+                        p2 = [],
+                        n = K.length - 1,
+
+                        /*rhs vector*/
+                        a = [],
+                        b = [],
+                        c = [],
+                        r = [];
+
+                    /*left most segment*/
+                    a[0] = 0;
+                    b[0] = 2;
+                    c[0] = 1;
+                    r[0] = K[0] + 2 * K[1];
+
+                    /*internal segments*/
+                    for (var i = 1; i < n - 1; i++) {
+                        a[i] = 1;
+                        b[i] = 4;
+                        c[i] = 1;
+                        r[i] = 4 * K[i] + 2 * K[i + 1];
+                    }
+
+                    /*right segment*/
+                    a[n - 1] = 2;
+                    b[n - 1] = 7;
+                    c[n - 1] = 0;
+                    r[n - 1] = 8 * K[n - 1] + K[n];
+
+                    /*solves Ax=b with the Thomas algorithm (from Wikipedia)*/
+                    for (i = 1; i < n; i++) {
+                        var m = a[i] / b[i - 1];
+                        b[i] = b[i] - m * c[i - 1];
+                        r[i] = r[i] - m * r[i - 1];
+                    }
+
+                    p1[n - 1] = r[n - 1] / b[n - 1];
+                    for (i = n - 2; i >= 0; --i)
+                        p1[i] = (r[i] - c[i] * p1[i + 1]) / b[i];
+
+                    /*we have p1, now compute p2*/
+                    for (i = 0; i < n - 1; i++)
+                        p2[i] = 2 * K[i + 1] - p1[i + 1];
+
+                    p2[n - 1] = 0.5 * (K[n] + p1[n - 1]);
+
+                    return {p1: p1, p2: p2};
+                }
+
+                updateSplines(rpr, draw);
+            }
+	}
+
+	// SVG.js
+    var rpr=[ //1000x600
+    	[40,480],
+		[120, 430],
+		[300, 450],
+		[450, 470],
+		[600, 180],
+		[800, 90],
+        [900,100]
+    ];
+
+    $(window).on('resize',function() {
+    	var x=$('#drawing>svg').eq(0);
+    	if(x.length>0)
+			var draw = SVG(x[0]);
+    	else
+		    var draw = SVG('drawing');
+		draw.clear().size(1000, 600);
+		engine.splice(rpr, draw);
+		//updateSplines(rpr,draw);
+		for (a = 1; a < rpr.length - 1; a += 1) {
+			draw.circle(16).fill('#FFF').move(rpr[a][0] - 8, rpr[a][1] - 8);
+			draw.circle(10).fill('#000').move(rpr[a][0] - 5, rpr[a][1] - 5);
+		}
+
+		// so let point it into background
+		// setTimeout(function(){
+		var s = new XMLSerializer().serializeToString(document.getElementsByTagName('svg')[0]);
+		var xx = document.getElementById('testing');
+		xx.style["background-image"] = "url('data:image/svg+xml;base64;charset=utf-8," + window.btoa(s) + "')";
+		//},100);
+	})
+
+</script>
+</html>

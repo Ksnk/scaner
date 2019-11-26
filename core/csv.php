@@ -43,10 +43,6 @@ class csv extends scaner
      */
     static function getcsv($nameresource, $headers = 1)
     {
-        ini_set("pcre.backtrack_limit", "2000000");
-        ini_set("pcre.recursion_limit",	"200000");
-        ini_set("pcre.jit",0);
-
         $class = new self();
         $class->newhandle($nameresource);
 
@@ -88,7 +84,7 @@ class csv extends scaner
                     // не подходит QUOTE
                     continue 2;
                 }
-                if (!empty($m[3])) {
+                if ($m[3][1]>0) {
                     // so newline
                     if ($cols == 0) $cols = $row;
                     else if (($cols == 0 && $row == 0) || $cols !== $row) {
@@ -96,20 +92,20 @@ class csv extends scaner
                         continue 2;
                     }
                     $row = 0;
-                    if (++$rows > 6) {
+                    $start = $m[4][1];
+                    if ($rows++>6 || $start > scaner::BUFSIZE>>1 || $start>=$class->finish) {
                         // проверка пройдена, заканчиваем
                         $class->param([
-                            'delimiter' => $delim,
+                            'delim' => $delim,
                             'quote' => $quote,
                             'encoding' => $encoding,
                             'detected' => true
                         ]);
                         break 3;
                     }
-                    $start = $m[3][1] + mb_strlen($m[3][0], '8bit');
                     continue;
                 } else {
-                    $start = $m[2][1] + 1;
+                    $start = $m[4][1] ;
                     if ($delim != $m[2][0]) {
                         // не подходит DELIM.
                         continue 2;
@@ -140,25 +136,18 @@ class csv extends scaner
             if(empty($m)){
                 // попытка прочитать поврежденный текст
                 $this->start++;$state=0;
-                do {
-                    if($state>2) break;
-                    if (!preg_match('~((?:' . $this->quote . '' . $this->quote . '|[^' . $this->quote . '])*)' . $this->quote . '(' . $this->delim . '|(\r\n|\n|\r))()~s', $this->buf, $m, PREG_OFFSET_CAPTURE, $this->start)) {
-                        if ($state == 0) {
-                            $this->prepare();
-                            $state++;
-                            continue;
-                        }
+                $col='';
+                while(preg_match('~[^' . $this->quote . ']*' . $this->quote . '()~su', $this->buf, $m, PREG_OFFSET_CAPTURE, $this->start)){
+                    $this->start=$m[1][1];
+                    if($this->buf{$this->start}== $this->quote ){
+                        $this->start++;
+                        $col.=$m[0][0];
+                    } else {
+                        $col.=mb_substr($m[0][0],0,-1,'8bit');
+                        break;
                     }
-                    if(empty($m))
-                        preg_match('~(*?)(' . $this->delim . '|(\r\n|\n|\r))()~s', $this->buf, $m, PREG_OFFSET_CAPTURE, $this->start);
-                    if ($this->start != $m[0][1]) {
-                        // пропустили кусок текста, проблемы, однако
-                        $this->prepare();$state++;
-                        continue;
-                    }
-                    $col = preg_replace('/' . $this->quote . $this->quote . '/', $this->quote, $m[1][0]);
-                    break;
-                } while(true);
+                }
+                preg_match('~()(' . $this->delim . '|(\r\n|\n|\r))()~su', $this->buf, $m, PREG_OFFSET_CAPTURE, $this->start);
             } else {
 
                 $col = $m[1][0];
