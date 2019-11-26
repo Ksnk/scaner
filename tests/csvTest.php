@@ -24,7 +24,7 @@ class csvTest extends PHPUnit_Framework_TestCase
         $fp=fopen($filename,'r');
         if($csv->hasbom>0) fseek($fp,$csv->hasbom);
         $cnt=0;
-        while(true){
+        while(!feof($fp)){
             $row=$csv->nextRow();
             $frow=fgetcsv($fp,20000,$csv->delim);
             if($row!=$frow){

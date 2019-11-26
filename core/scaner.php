@@ -188,7 +188,7 @@ class scaner
                     $x = mb_strrpos($this->buf, self::NL,0,'8bit');
                     if (false !== $x && self::GUARD_STRLEN>(mb_strlen($this->buf,'8bit')-$x)) {
                         $this->tail = mb_substr($this->buf, $x + 1, null,'8bit');
-                        $this->buf = mb_substr($this->buf, 0, $x,'8bit');
+                        $this->buf = mb_substr($this->buf, 0, $x+1,'8bit');
                     }
                 }
 

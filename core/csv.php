@@ -129,7 +129,8 @@ class csv extends scaner
                 str_replace(',', $this->delim, '~(.*?)(,|(\r\n|\n|\r))()~s'));
             if ($this->encoding == 'utf-8') $this->_reg .= 'u';
         }
-        if(false===$this->prepare(false)) return [];
+        $this->prepare(false);
+        if($this->finish-$this->filestart-$this->start<=0) return [];
         $cols = [];
         $m=[];
         while (
