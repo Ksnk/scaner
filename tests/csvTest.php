@@ -23,7 +23,11 @@ class csvTest extends PHPUnit_Framework_TestCase
         while (!feof($fp)) {
             $row = $csv->nextRow();
             $frow = fgetcsv($fp, 20000, $csv->delim);
+            if($csv->encoding!='utf-8' && !empty($frow)) {
+                foreach($frow as &$c) $c=iconv($csv->encoding,'utf-8//IGNORE', $c);
+            }
             if ($row != $frow) {
+                printf("failed: %s - %s\n", $cnt, $f);
                 $this->assertEquals($frow, $row);
                 break;
             }
@@ -33,17 +37,16 @@ class csvTest extends PHPUnit_Framework_TestCase
         printf("%s - %s\n", $cnt, $f);
     }
 
-    public function testGetcsv0()
+/*    public function testGetcsv0()
     {
-        $this->cmpCsv('data/data-20191112-structure-20171024.csv');
+        $this->cmpCsv('data/xcraft.2.csv');
     }
-
-/*    public function testGetcsv()
+*/
+    public function testGetcsv()
     {
-        $filename='data/data-20191112-structure-20171024.csv';
         $files=glob('data/*.csv');
         foreach($files as $f) {
             $this->cmpCsv($f);
         }
-    }*/
+    }
 }

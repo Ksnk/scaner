@@ -86,8 +86,11 @@ class csv extends scaner
                 }
                 if ($m[3][1]>0) {
                     // so newline
-                    if ($cols == 0) $cols = $row;
-                    else if (($cols == 0 && $row == 0) || $cols !== $row) {
+                    if ($cols == 0 && $row == 0){
+                        // количество столбцов разное
+                        continue 2;
+                    } else if ($cols == 0) $cols = $row;
+                    else if ($cols !== $row) {
                         // количество столбцов разное
                         continue 2;
                     }
@@ -120,37 +123,43 @@ class csv extends scaner
 
     function nextRow()
     {
+        $key='';
         if (empty($this->_reg)) {
+            $this->_reg0 = str_replace('"', $this->quote,
+                str_replace(',', $this->delim, '~((")(?:[^"]|"")*"|.*?)(,|(\r\n|\n|\r))()~s'));
             $this->_reg = str_replace('"', $this->quote,
                 str_replace(',', $this->delim, '~(.*?)(,|(\r\n|\n|\r))()~s'));
-            if ($this->encoding == 'utf-8') $this->_reg .= 'u';
+            if ($this->encoding == 'utf-8') $key = 'u';
         }
         $this->prepare(false);
         if($this->finish-$this->filestart-$this->start<=0) return [];
         $cols = [];
         $m=[];
-        while (
-            $this->buf{$this->start}==$this->quote
-            ||
-            preg_match($this->_reg, $this->buf, $m, PREG_OFFSET_CAPTURE, $this->start)) {
-            if(empty($m)){
-                // попытка прочитать поврежденный текст
-                $this->start++;$state=0;
-                $col='';
-                while(preg_match('~[^' . $this->quote . ']*' . $this->quote . '()~su', $this->buf, $m, PREG_OFFSET_CAPTURE, $this->start)){
-                    $this->start=$m[1][1];
-                    if($this->buf{$this->start}== $this->quote ){
-                        $this->start++;
-                        $col.=$m[0][0];
-                    } else {
-                        $col.=mb_substr($m[0][0],0,-1,'8bit');
-                        break;
+        while (true){
+            if(preg_match($this->_reg0.$key, $this->buf, $m, PREG_OFFSET_CAPTURE, $this->start)){
+                $col = preg_replace(['/^' . $this->quote . '/', '/' . $this->quote . '$/', '/' . $this->quote . $this->quote . '/'], ['', '', $this->quote], $m[1][0]);
+                array_shift($m);
+            } else // иногда, из за большого объема данных в поле, регулярка не выедает все в первый раз
+                if ($this->buf{$this->start}==$this->quote ||
+                    preg_match($this->_reg.$key, $this->buf, $m, PREG_OFFSET_CAPTURE, $this->start)) {
+                if (empty($m)) {
+                    // попытка прочитать поврежденный текст
+                    $this->start++;
+                    $col = '';
+                    while (preg_match('~[^' . $this->quote . ']*' . $this->quote . '()~s'.$key, $this->buf, $m, PREG_OFFSET_CAPTURE, $this->start)) {
+                        $this->start = $m[1][1];
+                        if ($this->buf{$this->start} == $this->quote) {
+                            $this->start++;
+                            $col .= $m[0][0];
+                        } else {
+                            $col .= mb_substr($m[0][0], 0, -1, '8bit');
+                            break;
+                        }
                     }
+                    preg_match('~()(' . $this->delim . '|(\r\n|\n|\r))()~su', $this->buf, $m, PREG_OFFSET_CAPTURE, $this->start);
+                } else {
+                    $col = $m[1][0];
                 }
-                preg_match('~()(' . $this->delim . '|(\r\n|\n|\r))()~su', $this->buf, $m, PREG_OFFSET_CAPTURE, $this->start);
-            } else {
-
-                $col = $m[1][0];
             }
             if ($this->encoding != 'utf-8') $col = iconv($this->encoding, 'utf-8//ignore', $col);
             $cols[] = $col;
