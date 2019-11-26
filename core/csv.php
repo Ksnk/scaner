@@ -21,6 +21,7 @@ class csv extends scaner
 
     var $delim = ';',
         $quote = '"',
+        $hasbom = 0,
         $newline = '',
         $detected = false,
         $encoding = 'windows-1251',
@@ -60,10 +61,12 @@ class csv extends scaner
         if (preg_match('~^(' . self::BOM . '|' . self::LE16 . ')~', $buf, $m)) {
             if ($m[0] == self::BOM) {
                 $encoding = 'utf-8';
-                $class->position(3); //wtf? 3
+                $class->hasbom=3;
+                $class->position(3);
             } else {
                 $encoding = 'utf-16RLE';
-                $class->position(2);//wtf? 2
+                $class->hasbom=2;
+                $class->position(2);
             }
         }
         $the_start = $class->getpos();

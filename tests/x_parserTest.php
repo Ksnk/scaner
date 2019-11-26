@@ -10,6 +10,10 @@ use \Ksnk\scaner\x_parser;
 
 class x_parserTest extends PHPUnit_Framework_TestCase {
 
+    function sanitizeWS($str){
+        return str_replace("\r","",str_replace(" \n","\n",$str));
+    }
+
     function testClassExists(){
         $this->assertNotEmpty(new x_parser());
     }
@@ -24,7 +28,7 @@ class x_parserTest extends PHPUnit_Framework_TestCase {
     function testOneParameter(){
 
         $this->assertEquals(
-            str_replace("\r","","array (
+            $this->sanitizeWS("array (
   'tags' =>
   array (
     0 => 'unknown',
@@ -62,7 +66,7 @@ class x_parserTest extends PHPUnit_Framework_TestCase {
     ),
   ),
 )"),
-            str_replace(" \n","\n",var_export(x_parser::getParameters('justforTest',__CLASS__), true))
+            $this->sanitizeWS(var_export(x_parser::getParameters('justforTest',__CLASS__), true))
         );
     }
 
