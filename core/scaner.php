@@ -158,6 +158,11 @@ class scaner
         preg_match_all('/$/m', $this->buf, $m, PREG_OFFSET_CAPTURE);
         if(isset($this->lines[$this->filestart+$m[0][0][1]])) {
             $this->lastline = $this->lines[$this->filestart+$m[0][0][1]];
+            if(count($this->lines)>10000){
+                foreach($this->lines as $k=>$v){
+                    if($v<$this->lastline) unset($this->lines[$k]);
+                }
+            }
         }
         foreach ($m[0] as $k => $v) {
             $this->lines[$this->filestart+$v[1]] = ++$this->lastline;
@@ -167,7 +172,7 @@ class scaner
     /**
      * дочитываем буфер, если надо
      * @param bool $force - проверять граничный размер
-     * @return bool - последний ли это препаре или нет
+     * @return bool===false - файл кончился
      */
     protected function prepare($force = true)
     {
