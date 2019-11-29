@@ -469,7 +469,7 @@ class scaner
     function syntax($tokens, $pattern, $callback)
     {
         // so build a reg
-        $idx = array(0,'_skiped');
+        $idx = array('_skiped');
         while (preg_match('/:(\w+):/', $pattern, $m, PREG_OFFSET_CAPTURE)) {
             if (!isset($tokens[$m[1][0]])) break;
             $idx[] = $m[1][0];
@@ -477,7 +477,7 @@ class scaner
             $pattern =
                 mb_substr($pattern, 0, $m[0][1], '8bit') .
                 '(' . implode('|', $tokens[$m[1][0]]) . ')' .
-                mb_substr($pattern, $m[0][1] + mb_strlen($m[0][0],'8bit'), '8bit');
+                mb_substr($pattern, $m[0][1] + mb_strlen($m[0][0],'8bit'), null, '8bit');
         }
         if ($this->till < 0) {
             $till = $this->finish;
@@ -496,6 +496,7 @@ class scaner
                 }
                 $r = array('_skiped' => $skiped);
                 $skiped='';
+                //array_shift($m);
                 foreach ($idx as $i => $v) {
                     if (isset($m[$i]) && !empty($i)) {
                         $r[$idx[$i]] = trim($m[$i][0], "\n\r ");

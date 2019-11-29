@@ -50,13 +50,12 @@ class dishonestsupplier_scenario extends scenario {
         $res['_opens']=0;
         $this->scaner->syntax([
             'ns' =>'[^//>]*:|',
+            'close' =>'/?',
             'tag' => '\w+',
-            'open' => '<:ns::tag:>',
-            'close' => '</:ns::tag:>',
-        ], '~:open:|:close:~sm',
+        ], '~<:close:?:ns::tag:>(?<fin>)~sm',
             function ($line) use (&$res) {
                 //echo htmlspecialchars(print_r($line, true));
-                if(!empty($line['open'])) {
+                if(empty($line['close'])) {
                     $res['_opens']++;
                     return true;
                 }
@@ -144,6 +143,7 @@ class dishonestsupplier_scenario extends scenario {
      */
     function do_scan_dir(){
         ftruncate($this->csv_handle,0);
+        fwrite($this->csv_handle,"\xEF\xBB\xBF");
         fputcsv($this->csv_handle,['inn','type', 'name','reason','where']);
 
         // generate item files
