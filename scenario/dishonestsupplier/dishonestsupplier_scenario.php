@@ -104,7 +104,7 @@ class dishonestsupplier_scenario extends scenario {
         } else {
             echo ' INN missed'.PHP_EOL;
         }
-        echo var_export($res,true).PHP_EOL;
+        //echo var_export($res,true).PHP_EOL;
     }
 
     function download_zip($filename){
