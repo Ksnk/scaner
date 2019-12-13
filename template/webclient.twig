@@ -123,6 +123,12 @@
             </button>
             <a class="navbar-brand" data-toggle="modal"
                data-target="#basicModal" href="remote-page.html"><span class="glyphicon glyphicon-wrench" aria-hidden="true"></span> </a>
+            <a class="navbar-brand postaction" data-action="stop" href="#">
+                <span class="glyphicon glyphicon-stop" aria-hidden="true"></span>
+            </a>
+            <a class="navbar-brand postaction" data-action="pause" href="#">
+                <span class="glyphicon glyphicon-pause" aria-hidden="true"></span>
+            </a>
         </div>
         <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
             <ul class="nav navbar-nav navbar-right">
@@ -223,6 +229,15 @@
             h && h[1] && _goto(h[1]);
             return false;
         });
+		$(document).on('click', '.postaction', function () {
+			var href=$(this).attr('href');
+			if(''==href) href=location.href;
+			var data='action='+$(this).attr('data-action');
+			$.post(
+				href,data
+            );
+			return false;
+		});
         console.log(location.hash);
         if(location.hash){
             _goto(location.hash.replace(/^#/,''));

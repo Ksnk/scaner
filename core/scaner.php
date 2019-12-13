@@ -143,6 +143,8 @@ class scaner
                 $this->finish = filesize($handle);
                 $handle = fopen($handle, 'r+');
             }
+        } else {
+          //$this->finish = filesize($handle);
         }
 
         $this->handle = $handle; // sign a new scan
@@ -195,6 +197,8 @@ class scaner
                         $this->tail = mb_substr($this->buf, $x + 1, null,'8bit');
                         $this->buf = mb_substr($this->buf, 0, $x+1,'8bit');
                     }
+                } else {
+                  $this->finish=$this->filestart+mb_strlen($this->buf,'8bit');
                 }
 
                 $this->filestart += $this->start;
@@ -489,7 +493,11 @@ class scaner
             $skiped='';
             while ($found=preg_match($pattern, $this->buf, $m, PREG_OFFSET_CAPTURE, $this->start)) {
                 $skiped = mb_substr($this->buf, $this->start, $m[0][1] - $this->start, '8bit');
-                $this->start = isset($m['fin'])?$m['fin'][1]:$m[count($idx)][1];
+                if(isset($m['fin'])){
+                  $this->start = $m['fin'][1];
+                } else {
+                  $this->start =$m[0][1]+mb_strlen($m[0][0],'8bit');
+                }
                 if ($this->filestart + $this->start > $till) {
                     $this->start=$m[0][1]; // не терять тег на границе буфера todo: oppa! строка то фиксированной длниы?
                     break;

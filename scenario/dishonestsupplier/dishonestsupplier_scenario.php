@@ -16,6 +16,7 @@ class dishonestsupplier_scenario extends scenario {
     /** @var resource */
     var    $csv_handle;
     static $single=null;
+    var $noanycsv = false;
 
     static function get($par){
         if (!self::$single) {
@@ -40,12 +41,12 @@ class dishonestsupplier_scenario extends scenario {
         return $tr;
     }
 
-    function scan_xml($buf,$name, $filename){
+    function scan_xml($buf,$name, $filename, $time=0){
         echo $name.' '.$filename.PHP_EOL;
         $this->scaner->newbuf($buf);
         $this->scaner
-            ->ifscan('~reason>(.+?)<~i',1,'reson')
-            ->scan('/unfairSupplier/')->until('/unfairSupplier/');
+          ->ifscan('~reason>(.+?)<~i',1,'reson')
+          ->scan('/unfairSupplier/')->until('/unfairSupplier/');
         $res=$this->scaner->getresult();
         $res['_opens']=0;
         $this->scaner->syntax([
@@ -82,6 +83,23 @@ class dishonestsupplier_scenario extends scenario {
 
                 return true;
             });
+        $this->scaner->until();
+        foreach(['registryNum','regNum'=>'registryNum','publishDate','approveDate'=>'publishDate'] as $k=>$v) {
+          if(is_numeric($k))$k=$v;
+          if(!empty($res[$v])) continue;
+          $this->scaner->position(0);
+          $this->scaner->scan('~'.$k.'>(.+?)<~i', 1, $k);
+          $resx=$this->scaner->getresult();
+
+          if(isset($resx[$k]))$res[$v]=$resx[$k]; else $res[$v]='';
+
+        }
+
+      //<oos:registryNum>РНП.24120-15</oos:registryNum>
+        //<oos:publishDate>2015-01-13T00:00:00Z</oos:publishDate>
+        //<oos:approveDate>2015-01-13T00:00:00Z</oos:approveDate>
+        // <oos:protocolDate>2012-12-14</oos:protocolDate>
+
         if(isset($res['reson'])){
             if($res['reson']=='CANCEL_CONTRACT'){
                 $res['reson']="Расторжение контракта";
@@ -95,30 +113,37 @@ class dishonestsupplier_scenario extends scenario {
                 $res['reson']="Уклонение победителя от заключения контракта";
             }
         }
+        if(empty($res['publishDate'])){
+          $res['publishDate']=$time;
+        }
         if(!empty($res['inn'])) {
-            if (!isset($res['inn']) || !isset($res['type']) || !isset($res['name']) || !isset($res['reson'])) {
+            if (!isset($res['inn']) || !isset($res['type']) || !isset($res['name']) || !isset($res['reson']) || !isset($res['publishDate'])) {
                 echo ' some variable absent'.PHP_EOL;
 //                die(0);
             }
-            fputcsv($this->csv_handle, [$res['inn'], $res['type'], $res['name'], $res['reson'], $name . ' ' . $filename]);
+            if($this->noanycsv){
+              print_r([$res['inn'], $res['registryNum'], date("Y-m-d H:i:s", strtotime($res['publishDate'])), $res['type'], $res['name'], $res['reson'], $name . ' ' . $filename]);
+            } else {
+              fputcsv($this->csv_handle, [$res['inn'], $res['registryNum'], date("Y-m-d H:i:s", strtotime($res['publishDate'])), $res['type'], $res['name'], $res['reson'], $name . ' ' . $filename], ';');
+            }
         } else {
             echo ' INN missed'.PHP_EOL;
         }
         //echo var_export($res,true).PHP_EOL;
     }
 
-    function download_zip($filename){
+    function download_zip($filename, $time=0){
         echo $filename.PHP_EOL;
         $transport=$this->get_transport();
         $lfn=$transport->get($filename);
         if($lfn) {
-            $this->open_zip($lfn,$filename);
+            $this->open_zip($lfn,$filename, '*.xml',$time);
         }
         unlink($lfn);
         return true;
     }
 
-    function open_zip($lfn, $debug, $mask='*.xml'){
+    function open_zip($lfn, $debug, $mask='*.xml', $time=0){
         if($lfn) {
             $regmask=\UTILS::masktoreg($mask);
             if ($zip = zip_open($lfn)) {
@@ -128,7 +153,7 @@ class dishonestsupplier_scenario extends scenario {
                     if(preg_match($regmask,$name)) {
                         if (zip_entry_open($zip, $zip_entry, "r")) {
                             $buf = zip_entry_read($zip_entry, zip_entry_filesize($zip_entry));
-                            $this->scan_xml($buf, $name, $debug);
+                            $this->scan_xml($buf, $name, $debug, $time);
                             zip_entry_close($zip_entry);
                         }
                     }
@@ -144,7 +169,7 @@ class dishonestsupplier_scenario extends scenario {
     function do_scan_dir(){
         ftruncate($this->csv_handle,0);
         fwrite($this->csv_handle,"\xEF\xBB\xBF");
-        fputcsv($this->csv_handle,['inn','type', 'name','reason','where']);
+        fputcsv($this->csv_handle,['inn','reg','date','type', 'name','reason','where'],';');
 
         // generate item files
         // $this->upload_file('test','items.xml');
@@ -158,7 +183,7 @@ class dishonestsupplier_scenario extends scenario {
                     printf('file `%s`, time: %s<br>' . PHP_EOL, $item['filename'], date('d-m-Y H:i:y', $item['mtime']));
                     $times[$item['filename']] = $item['mtime'];
 
-                    $this->joblist->append_scenario('download_zip', [$dir.'/'.$item['filename']]);
+                    $this->joblist->append_scenario('download_zip', [$dir.'/'.$item['filename'], date("Y-m-d H:i:s",$item['mtime'])]);
                    // if($cnt--<=0)continue 2;
                 }
             }
@@ -167,13 +192,21 @@ class dishonestsupplier_scenario extends scenario {
 
     /**
      * Тестировать
-     * @param file $zipfile :select[~dir(../../core/*.zip)]  имя файла для обработки
+     * @param file $zipfile :select[~dir(../../data/*.zip)]  имя файла для обработки
      * @param $name
      */
     function do_test($zipfile, $name)
     {
-        echo $zipfile.PHP_EOL;
+      $this->noanycsv=true;
+      if (false !== strpos($name, ' ')) {
+        list($f, $zip) = explode(' ', $name);
+        $transport = $this->get_transport();
+        $zipf = $transport->get($zip);
+        $this->open_zip($zipf, ' ', $f, date("Y-m-d H:i:s"));
+      } else {
+        echo $zipfile . PHP_EOL;
         $this->open_zip($zipfile, ' ', $name);
+      }
     }
 
     /**

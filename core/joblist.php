@@ -107,65 +107,66 @@ class joblist extends base
     /**
      * @return bool
      */
-    function donext()
+    function donext($til=20)
     {
-
-        if (count($this->list) == 0 && ! empty($this->classes)){
-            foreach($this->classes as $class){
-                if (method_exists($class, 'handle')) {
-                    call_user_func(array($class, 'handle'),'complete');
-                }
+      while(true) {
+        if (count($this->list) == 0 && !empty($this->classes)) {
+          foreach ($this->classes as $class) {
+            if (method_exists($class, 'handle')) {
+              call_user_func(array($class, 'handle'), 'complete');
             }
+          }
         }
-        if(microtime(true)-$this->_timestart>20){
-            if ( !empty($this->classes)){
-                $data=array();
-                foreach($this->classes as $name=>$class){
-                    if (method_exists($class, 'handle')) {
-                        $res=call_user_func(array($class, 'handle'),'store');
-                        if(!empty($res)){
-                            $data[$name]=$res;
-                        }
-                    }
+        if (!is_null($til) && microtime(true) - $this->_timestart > $til) {
+          if (!empty($this->classes)) {
+            $data = array();
+            foreach ($this->classes as $name => $class) {
+              if (method_exists($class, 'handle')) {
+                $res = call_user_func(array($class, 'handle'), 'store');
+                if (!empty($res)) {
+                  $data[$name] = $res;
                 }
-                if(!empty($data))
-                    $this->store(true,$data);
+              }
             }
-            return false;
+            if (!empty($data))
+              $this->store(true, $data);
+          }
+          return false;
         }
 
-        if (count($this->list) == 0){
-            return false;
+        if (count($this->list) == 0) {
+          return false;
         }
         $this->load();
         $task = array_shift($this->list);
         $this->store(true);
         $scn = array_shift($task[1]);
         switch ($task[0]) {
-            case "scenario":
-                $this->cdir=\UTILS::val($scn,'dir');
-                $this->cclass=\UTILS::val($scn,'class');
-                if(!class_exists($scn['class'],false))
-                    if(isset($scn['dir']))
-                        include_once($scn['dir']);
-                $cname=$scn['class'];$par=null;
-                if (isset($this->data[$scn['class']])){
-                    $par=$this->data[$scn['class']];
-                }
-                if (method_exists($scn['class'], 'get')) {
-                    $class=call_user_func(array($cname, 'get'),$this,$par);
-                    $this->classes[$scn['class']]=$class;
-                } else {
-                    $class =new $cname($this,$par);
-                }
+          case "scenario":
+            $this->cdir = \UTILS::val($scn, 'dir');
+            $this->cclass = \UTILS::val($scn, 'class');
+            if (!class_exists($scn['class'], false))
+              if (isset($scn['dir']))
+                include_once($scn['dir']);
+            $cname = $scn['class'];
+            $par = null;
+            if (isset($this->data[$scn['class']])) {
+              $par = $this->data[$scn['class']];
+            }
+            if (method_exists($scn['class'], 'get')) {
+              $class = call_user_func(array($cname, 'get'), $this, $par);
+              $this->classes[$scn['class']] = $class;
+            } else {
+              $class = new $cname($this, $par);
+            }
 
-                if (method_exists($class, $scn['method'])) {
-                    call_user_func_array(array($class, $scn['method']), $task[1][0]);
-                }
-                break;
-
+            if (method_exists($class, $scn['method'])) {
+              call_user_func_array(array($class, $scn['method']), $task[1][0]);
+            }
+            break;
         }
-        return true;
+      }
+      return true;
     }
 
 }

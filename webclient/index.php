@@ -28,6 +28,15 @@ function __(&$x, $default = '')
     return empty($x) ? $default : $x;
 }
 
+if ($_SERVER['REQUEST_METHOD'] == 'POST'){
+  if(\UTILS::val($_POST,'action')=='stop'){
+    unlink(joblist::STORE_FILE);
+    exit;
+  } else if(\UTILS::val($_POST,'action')=='pause'){
+    unlink(joblist::STORE_FILE);
+    exit;
+  }
+}
 
 session_start();
 $joblist = new joblist();
@@ -36,9 +45,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     //  "continue"
     if(UTILS::val($_GET,'target')=='iframe'){ //?callback=log&target=iframe)
         ob_start();
-        while ($joblist->donext()) {
-            ;
-        }
+        $joblist->donext();
         $result = trim(ob_get_contents());
         ob_end_clean();
         echo '<script type="text/javascript"> top.'.UTILS::val($_GET,'callback','ajax_handle').'('.utf8_encode(json_encode(array(
@@ -95,7 +102,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $action = UTILS::val($_POST,'action','');
         list($class, $method, $empty) = explode('::', $action . '::::', 3);
         if(!empty($action)){
-            $top = array('class' => $class, 'method' => $method, 'dir' => realpath(UTILS::val($_POST[$action],'_')));
+            $top = array('class' => $class, 'method' => $method, 'dir' => realpath(\UTILS::val($_POST[$action],'_')));
         //var_dump($action);//var_dump($top['dir']);
         //if($class=='braindesign_scan_scenario')
         $res = x_parser::getParameters('', $class, $top['dir']);
@@ -145,7 +152,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $par .= $_SERVER["REQUEST_URI"];
     }
 
-    if(UTILS::val($headers,"X-Requested-With")== "XMLHttpRequest"){
+    if(\UTILS::val($headers,"X-Requested-With")== "XMLHttpRequest"){
         //header("Content-Type: application/json");
         if (!empty($debug))
             $response['debug']= $debug;
@@ -270,7 +277,7 @@ foreach ($scenariofiles as $sc) {
 }
 
 ob_start();
-while ($joblist->donext()) {;}
+$joblist->donext();
 $result = trim(ob_get_contents());
 ob_end_clean();
 
