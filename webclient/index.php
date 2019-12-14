@@ -29,11 +29,8 @@ function __(&$x, $default = '')
 }
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST'){
-  if(\UTILS::val($_POST,'action')=='stop'){
-    unlink(joblist::STORE_FILE);
-    exit;
-  } else if(\UTILS::val($_POST,'action')=='pause'){
-    unlink(joblist::STORE_FILE);
+  if(($action=\UTILS::val($_POST,'todo'))!==''){
+    joblist::action($action);
     exit;
   }
 }

@@ -501,7 +501,7 @@ class nat_parser
             $vc = count($m[0]);
             for ($i = 0; $i < $vc; $i++) {
                 if (empty($m[0][$i])) continue;
-                $curptr += strlen($m[0][$i]);
+                $curptr += mb_strlen($m[0][$i], 'UTF-8');
                 if (!empty($m[1][$i])) {
                     $op = $this->oper(stripslashes($m[2][$i]), self::TYPE_STRING, $curptr);
                     if ($m[1][$i] == "'")

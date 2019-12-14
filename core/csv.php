@@ -36,6 +36,24 @@ class csv extends scaner
     }
 
     /**
+     * Упрощенная генерация класса для распарсинга строки
+     * @param $string
+     * @param array $param
+     * @return csv
+     */
+    static function csvStr($string, $param = [])
+    {
+        $class = new self();
+        $class->newbuf($string);
+        if(!isset($param['encoding'])) {
+            $param['encoding']=mb_detect_encoding($string, 'utf-8', true)
+                ?'utf-8':'cp1251';
+        }
+        $class->param($param);
+        return $class;
+    }
+
+    /**
      * функция выдает класс csv с правильно определенной кодировкой и делимитерами
      * @param $nameresource
      * @param $headers - количество строк на заголовок.

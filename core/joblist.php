@@ -14,6 +14,7 @@ namespace Ksnk\scaner;
 class joblist extends base
 {
     const STORE_FILE='store.json';
+    const ACTION_FILE='action.json';
     var $mtime=0, $classes=array();
 
     var $list = array(), $_timestart=0,
@@ -27,6 +28,16 @@ class joblist extends base
 
     function __destruct(){
        // $this->store();
+    }
+
+    /**
+     * Записать аварийный флаг, чтобы повлиять на donext
+     * @param $action
+     */
+    static function action($action){
+        $a=self::getAction();
+        $a[$action]=time();
+        self::storeAction($a);
     }
 
     private function store($force=false,$data=null){
@@ -43,10 +54,27 @@ class joblist extends base
             'cdir'=>$this->cdir,
             'cclass'=>$this->cclass,
             'data'=>$data,
-        ));
+        ),JSON_UNESCAPED_UNICODE+JSON_PRETTY_PRINT);
         if(!empty($x)){
             file_put_contents(self::STORE_FILE,$x);
             $this->mtime=filemtime(self::STORE_FILE);
+        } else {
+            echo 'json error :'.json_last_error();
+        }
+    }
+
+    private static function getAction(){
+        if(!is_readable(self::ACTION_FILE)) return false;
+        return json_decode(file_get_contents(self::ACTION_FILE),true);
+    }
+
+    private static function storeAction($action){
+        if(empty($action && is_readable(self::ACTION_FILE))){
+            unlink(self::ACTION_FILE);
+        }
+        $x=@json_encode($action);
+        if(!empty($x)){
+            file_put_contents(self::ACTION_FILE,$x);
         } else {
             echo 'json error :'.json_last_error();
         }
@@ -116,6 +144,22 @@ class joblist extends base
               call_user_func(array($class, 'handle'), 'complete');
             }
           }
+        }
+        if(!empty($action=self::getAction())){
+            if(isset($action['pause'])){
+                unset($action['pause']);
+                self::storeAction($action);
+                return false;
+            }
+            if(isset($action['stop'])){
+                unset($action['stop']);
+                $this->list=[];
+                $this->store(true);
+                self::storeAction($action);
+                return false;
+            }
+            $action=[];
+            self::storeAction($action);
         }
         if (!is_null($til) && microtime(true) - $this->_timestart > $til) {
           if (!empty($this->classes)) {

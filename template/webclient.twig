@@ -232,7 +232,7 @@
 		$(document).on('click', '.postaction', function () {
 			var href=$(this).attr('href');
 			if(''==href) href=location.href;
-			var data='action='+$(this).attr('data-action');
+			var data='todo='+$(this).attr('data-action');
 			$.post(
 				href,data
             );
