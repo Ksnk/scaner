@@ -242,6 +242,7 @@ class UTILS {
      */
     static function findFiles($dirs,$callback=null){
         $result=array();
+        if(!is_array($dirs)) $dirs=[$dirs];
         foreach($dirs as $dir){
             $mask=UTILS::masktoreg($dir);
             list($ddir,$rest)=preg_split('~[^/]*[\*\?]~',$dir,2);
@@ -258,7 +259,7 @@ class UTILS {
                     if($res===false){
                         break 2;
                     } else if($res){
-                        $result[$name];
+                        $result[]=$name;
                     }
                 }
             }

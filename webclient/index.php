@@ -1,139 +1,105 @@
 <?php
-
-use  \Ksnk\scaner\base,
-    \Ksnk\scaner\joblist,
-    \Ksnk\scaner\x_parser
-    ;
-
-define('USE_NAMESPACE', 'Ksnk\scaner\\');
 /**
  * Created by PhpStorm.
  * User: Аня
  * Date: 29.11.15
  * Time: 17:25
  */
+
+use
+    \Ksnk\scaner\joblist,
+    \Ksnk\scaner\x_parser;
+
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
 
-define('INDEX_DIR',dirname(__DIR__));
+define('USE_NAMESPACE', 'Ksnk\\scaner\\');
+define('INDEX_DIR', dirname(__DIR__));
+define('TEMP_DIR', '../temp/');
 
 include_once "../autoload.php";
 
-\Autoload::map([USE_NAMESPACE=>'']);
+\Autoload::map([USE_NAMESPACE => '']);
 
-    define('TEMP_DIR','../temp/');
-
-function __(&$x, $default = '')
-{
-    return empty($x) ? $default : $x;
-}
-
-if ($_SERVER['REQUEST_METHOD'] == 'POST'){
-  if(($action=\UTILS::val($_POST,'todo'))!==''){
-    joblist::action($action);
-    exit;
-  }
-}
-
-session_start();
+ENGINE::start_session();
 $joblist = new joblist();
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    //  "continue"
-    if(UTILS::val($_GET,'target')=='iframe'){ //?callback=log&target=iframe)
+    /**
+     * кнопки пауза-стоп
+     */
+    if (($action = \UTILS::val($_POST, 'todo')) !== '') {
+        joblist::action($action);
+        exit;
+    }
+    /**
+     * запрос на выполнение очередного цикла выполнения
+     */
+    if (UTILS::val($_GET, 'target') == 'iframe') { //?callback=log&target=iframe)
         ob_start();
         $joblist->donext();
         $result = trim(ob_get_contents());
         ob_end_clean();
-        echo '<script type="text/javascript"> top.'.UTILS::val($_GET,'callback','ajax_handle').'('.utf8_encode(json_encode(array(
-                'cnt'=>$joblist->jobcount()>0?  sprintf('to be continued...(%s jobs in queue)',$joblist->jobcount()):'',
-                'log'=>$result
-            ))).')</script>';
+        echo '<script type="text/javascript"> top.' . UTILS::val($_GET, 'callback', 'ajax_handle') . '(' . utf8_encode(json_encode(array(
+                'cnt' => $joblist->jobcount() > 0 ? sprintf('to be continued...(%s jobs in queue)', $joblist->jobcount()) : '',
+                'log' => $result
+            ))) . ')</script>';
         exit;
     }
-
+    /**
+     * начало выполнения
+     */
     $_SESSION['form'] = $_POST;
-  /*  $x=glob(TEMP_DIR.'/.up*');
-    while(count($x)>0){
-        unlink($x[0]);
-        array_shift($x);
-    }*/
     ob_start();
-    $headers=UTILS::getallheaders();
-    $response=array();
+    $headers = UTILS::getallheaders();
+    $response = array();
 
-    if(!empty($_FILES) && UTILS::val($headers,"X-Requested-With")== "XMLHttpRequest"){
-        //echo realpath(TEMP_DIR);
+    /**
+     * загрузка-дозагрузка файлов
+     */
+    if (!empty($_FILES) && UTILS::val($headers, "X-Requested-With") == "XMLHttpRequest") {
         // попытка загрузить файлы
         // налистываем файлы
-        $uploaded=UTILS::uploadedFiles();
+        $uploaded = UTILS::uploadedFiles();
 
-        foreach($uploaded as &$v){
-           // print_r ($v);
+        foreach ($uploaded as &$v) {
+            // print_r ($v);
             $xname = UTILS::translit($v['name']);
-            $y=TEMP_DIR . $xname ;
+            $y = TEMP_DIR . $xname;
 
-            if(isset($_POST['chunked']) && $_POST['chunked']>0){
-                $x=tempnam(TEMP_DIR,'.tp');
+            if (isset($_POST['chunked']) && $_POST['chunked'] > 0) {
+                $x = tempnam(TEMP_DIR, '.tp');
                 move_uploaded_file(
                     $v['tmp_name'],
                     $x
                 );
-                $h=fopen($y,'a');
-                fwrite($h,file_get_contents($x));
+                $h = fopen($y, 'a');
+                fwrite($h, file_get_contents($x));
                 fclose($h);
                 unlink($x);
-                $v['chunked']=$_POST['chunked'];
+                $v['chunked'] = $_POST['chunked'];
             } else {
                 move_uploaded_file(
                     $v['tmp_name'],
                     $y
                 );
             }
-            $v['file']=$y;
+            $v['file'] = $y;
         }
-        $response['uploaded']=$uploaded;
+        $response['uploaded'] = $uploaded;
     }
 
     try {
-        $action = UTILS::val($_POST,'action','');
+        $action = UTILS::val($_POST, 'action', '');
         list($class, $method, $empty) = explode('::', $action . '::::', 3);
-        if(!empty($action)){
-            $top = array('class' => $class, 'method' => $method, 'dir' => realpath(\UTILS::val($_POST[$action],'_')));
-        //var_dump($action);//var_dump($top['dir']);
-        //if($class=='braindesign_scan_scenario')
-        $res = x_parser::getParameters('', $class, $top['dir']);
-        $param = array();
-        foreach ($res[$class][$method]['param'] as $name => $par) {
-           /*if($par['type']=='file' ){
-                $res=array();
-                if(''!=UTILS::val($_FILES,$action.'|name|'.$name,'')){
-                    if( 0==UTILS::val($_FILES,$action.'|error|'.$name,0)){
-                        $test_file=tempnam(TEMP_DIR,'.up');
-                        move_uploaded_file($_FILES[$action]['tmp_name'][$name],$test_file);
-                        $res=array(
-    $test_file=>$_FILES[$action]['name'][$name]
-                        );
-                    }
-                }
-                $param[]=$res;
-            } else if($par['type']=='files' ){
-                $res=array();
-                if(isset($_FILES[$action]['name'][$name])){
-                    foreach($_FILES[$action]['name'][$name] as $k=>$v){
-                        if( empty($_FILES[$action]['error'][$name][$k])){
-                            $test_file=tempnam(TEMP_DIR,'.uploaded');
-                            move_uploaded_file($_FILES[$action]['tmp_name'][$name][$k],$test_file);
-                            $res[$test_file]=$v;
-                        }
-                    }
-                }
-                $param[]=$res;
-            } else {*/
-                $param[] = __($_POST[$action][$name]);
-           // }
-        }
-        $joblist->append_scenario($top, $param);
+        if (!empty($action)) {
+            $top = array('class' => $class, 'method' => $method, 'dir' => realpath(\UTILS::val($_POST[$action], '_')));
+            $res = x_parser::getParameters('', $class, $top['dir']);
+            $param = array();
+            foreach ($res[$class][$method]['param'] as $name => $par) {
+                $param[] = \UTILS::val($_POST,$action.'|'.$name);
+            }
+            $joblist->append_scenario($top, $param);
         }
     } catch (Exception $e) {
         echo 'Caught exception: ', $e->getMessage(), "\n";
@@ -142,20 +108,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
     $debug = ob_get_contents();
     ob_end_clean();
-    $par = 'http://' . $_SERVER["HTTP_HOST"];
-    if (!empty($direct)) {
-        $par .= $direct;
-    } else {
-        $par .= $_SERVER["REQUEST_URI"];
-    }
+    $par = (!empty($_SERVER['HTTPS']) && 'off' !== strtolower($_SERVER['HTTPS'])?'https://':'http://') . $_SERVER["HTTP_HOST"].$_SERVER["REQUEST_URI"];
 
-    if(\UTILS::val($headers,"X-Requested-With")== "XMLHttpRequest"){
+    if (\UTILS::val($headers, "X-Requested-With") == "XMLHttpRequest") {
         //header("Content-Type: application/json");
         if (!empty($debug))
-            $response['debug']= $debug;
-        echo utf8_encode(json_encode($response,JSON_UNESCAPED_UNICODE+JSON_ERROR_NONE));
+            $response['debug'] = $debug;
+        echo utf8_encode(json_encode($response, JSON_UNESCAPED_UNICODE + JSON_ERROR_NONE));
     } else {
-
         if (empty($debug) && !headers_sent()) {
             header("location:" . $par);
         } else
@@ -173,26 +133,26 @@ x_parser::$templates = array(
 
     'labeledinput' => '<div class="row"> <label for="{{UID}}" class="col-xs-' . ($lsize) . ' control-label">{{label}}</label><div class="col-xs-' . (12 - $lsize) . '"><input id="{{UID}}" type="text" name="{{name}}" value="{{value}}" class="input-sm form-control"></div></div>',
 
-    'file' => '<div class="row file_upload dropzone">'.
-        '<label for="{{UID}}" class="col-xs-' . ($lsize) . ' control-label">{{label}}</label>'.
-        '<div class="col-xs-' . (12 - $lsize) . '"><div class=" input-group">'.
-            '<select name="{{name}}" id="{{UID}}" class="input-sm form-control" {{attr}} >{{radio}}</select>'.
-            '<span class="input-group-btn">
+    'file' => '<div class="row file_upload dropzone">' .
+        '<label for="{{UID}}" class="col-xs-' . ($lsize) . ' control-label">{{label}}</label>' .
+        '<div class="col-xs-' . (12 - $lsize) . '"><div class=" input-group">' .
+        '<select name="{{name}}" id="{{UID}}" class="input-sm form-control" {{attr}} >{{radio}}</select>' .
+        '<span class="input-group-btn">
 <span class="btn btn-default btn-file" style="line-height: 1.2em;">
     + <input type="file" name="_{{name}}">
-</span>'.
-        '</div>'.'</div>'.
-    '</div>',
+</span>' .
+        '</div>' . '</div>' .
+        '</div>',
 
-    'files' => '<div class="row file_upload dropzone">'.
-        '<label for="{{UID}}" class="col-xs-' . ($lsize) . ' control-label">{{label}}</label>'.
-        '<div class="col-xs-' . (12 - $lsize) . ' input-group">'.
-        '<select name="{{name}}[]" size=1 multiple="multiple" id="{{UID}}" class="form-control" {{attr}} >{{radio}}</select>'.
+    'files' => '<div class="row file_upload dropzone">' .
+        '<label for="{{UID}}" class="col-xs-' . ($lsize) . ' control-label">{{label}}</label>' .
+        '<div class="col-xs-' . (12 - $lsize) . ' input-group">' .
+        '<select name="{{name}}[]" size=1 multiple="multiple" id="{{UID}}" class="form-control" {{attr}} >{{radio}}</select>' .
         '<span class="input-group-btn">
 <span class="btn btn-default btn-file">
 + <input type="file" name="_{{name}}[]">
-</span>'.
-        '</div>'.
+</span>' .
+        '</div>' .
         '</div>',
 
 // блок радио и чекбоксов
@@ -216,25 +176,23 @@ x_parser::$templates = array(
             </div>{% if res %}<div class="panel-body">{{res}}</div>{% endif %}</div>'
 );
 
-$filter =\UTILS::val($_GET,'filter');
-if(!empty($filter)){
-    $filter=\UTILS::masktoreg($filter);
+$filter = \UTILS::val($_GET, 'filter');
+if (!empty($filter)) {
+    $filter = \UTILS::masktoreg($filter);
 } else {
-    $filter='/./';
+    $filter = '/./';
 }
 
+$tag = 'unknown';
+if (!empty($_GET['tag'])) {
+    $tag = $_GET['tag'];
+}
+
+$tags = array();
 
 $data = array();
-$scenariofiles = glob('../scenario/*/*_scenario.php');
-$tag='unknown';
-if(!empty($_GET['tag'])){
-    $tag=$_GET['tag'];
-}
-
-$tags=array();
-
-foreach ($scenariofiles as $sc) {
-    $classname = USE_NAMESPACE.basename($sc, '.php');
+\UTILS::findFiles('../scenario/*/*_scenario.php',function($sc)use(&$tags,&$filter,&$tag,&$data){
+    $classname = USE_NAMESPACE . basename($sc, '.php');
     $res = x_parser::getParameters('', $classname, realpath($sc));
     //var_export($tag);
     foreach ($res[$classname] as $method => $val) {
@@ -243,25 +201,24 @@ foreach ($scenariofiles as $sc) {
             break;
         }
     }
-    if(!in_array($tag,$res['tags'])){
-       // var_export($res['tags']);
-        continue;
+    if (!in_array($tag, $res['tags'])) {
+        // var_export($res['tags']);
+        return 0;
     }
-    if (empty($res) || empty($res[$classname]) || !preg_match($filter,$classname)) {
+    if (empty($res) || empty($res[$classname]) || !preg_match($filter, $classname)) {
         //ENGINE::debug($filter,$res);
-        continue;
+        return 0;
     }
     foreach ($res[$classname] as $method => $val) {
 
         if (!preg_match('/^do_(.*)$/', $method)) continue;
 
-        //  echo '<!--xxx-- '.print_r($val,true).' -->';
         $res = '';
         foreach ($val['param'] as $name => $par) {
             $par['class'][] = "form-control";
             $par['parname'] = $name;
 
-            $res .= x_parser::createInput($par, __($_SESSION['form'], array()));
+            $res .= x_parser::createInput($par, \UTILS::val($_SESSION,'form', []));
         }
         $data[] = array(
             'title' => $val['title'],
@@ -271,26 +228,26 @@ foreach ($scenariofiles as $sc) {
             'anchor' => urlencode($val['title']),
         );
     }
-}
+});
 
 ob_start();
 $joblist->donext();
 $result = trim(ob_get_contents());
 ob_end_clean();
 
-Autoload::register(['~/libs/template','~/template']);
+Autoload::register(['~/libs/template', '~/template']);
 
 template_compiler::checktpl(array(
-    'templates_dir'=> '../template/',
-    'TEMPLATE_PATH'=> '../template/',
-    'PHP_PATH'=> '../template/',
-    'TEMPLATE_EXTENSION'=>'twig',
+    'templates_dir' => '../template/',
+    'TEMPLATE_PATH' => '../template/',
+    'PHP_PATH' => '../template/',
+    'TEMPLATE_EXTENSION' => 'twig',
 //    'FORCE'=>1 // для обязательной перекомпиляции щаблонов
 ));
 
-echo ENGINE::template('tpl_webclient','_',array(
-    'result'=>$result,
-    'data'=>$data,
-    'tags'=>array_unique($tags),
-    'joblist'=>$joblist,
+echo ENGINE::template('tpl_webclient', '_', array(
+    'result' => $result,
+    'data' => $data,
+    'tags' => array_unique($tags),
+    'joblist' => $joblist,
 ));
