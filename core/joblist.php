@@ -71,6 +71,7 @@ class joblist extends base
     private static function storeAction($action){
         if(empty($action && is_readable(self::ACTION_FILE))){
             unlink(self::ACTION_FILE);
+            return ;
         }
         $x=@json_encode($action);
         if(!empty($x)){
@@ -137,6 +138,7 @@ class joblist extends base
      */
     function donext($til=20)
     {
+      $starttime=time();
       while(true) {
         if (count($this->list) == 0 && !empty($this->classes)) {
           foreach ($this->classes as $class) {
@@ -146,15 +148,17 @@ class joblist extends base
           }
         }
         if(!empty($action=self::getAction())){
-            if(isset($action['pause'])){
+            if(isset($action['pause']) && $starttime>=$action['pause']){
                 unset($action['pause']);
+                echo '...paused...';
                 self::storeAction($action);
                 return false;
             }
-            if(isset($action['stop'])){
+            if(isset($action['stop']) && $starttime>=$action['stop']){
                 unset($action['stop']);
                 $this->list=[];
                 $this->store(true);
+                echo '...stopped...';
                 self::storeAction($action);
                 return false;
             }

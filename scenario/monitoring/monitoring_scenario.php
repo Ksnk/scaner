@@ -9,7 +9,7 @@
 namespace Ksnk\scaner;
 
 /**
- * Работа с сайтом http://www.rfbr.ru/rffi/ru/ - сканирование части разделов, книг и конкурсов
+ * Оформление некоторых идииотизмов в задачах сатарого monitoriing'а
  * Class monitoring_scenario
  *
  * Примерная схема работы
@@ -113,7 +113,7 @@ class monitoring_scenario extends scenario
       $scaner = $this->scaner;
       $scaner->newhandle(self::reghtml);
       $scaner
-        ->scan('~<tr class=["\']row_org\s+row_reg_(?:(?!<tr).)*?>' . $id . '</div>~smi');
+        ->scan('~<tr class=["\']row_org\s+row_reg_(?:(?!<tr).)*?>\s*' . $id . '\s*</div>~smi');
       if ($scaner->found) {
         $scaner->position($scaner->reg_begin - 1);
         $scaner->syntax([

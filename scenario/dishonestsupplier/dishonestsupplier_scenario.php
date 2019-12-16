@@ -22,7 +22,9 @@ class dishonestsupplier_scenario extends scenario {
         if (!self::$single) {
             self::$single = new self($par);
            // self::$single->scaner= new spider(); // не нужно инициировать, если нет параметров ?
-            self::$single->csv_handle = fopen('file.csv', 'a+');
+            self::$single->csv_handle = @fopen('file.csv', 'a+');
+            if(empty(self::$single->csv_handle))
+              printf("'%s' не может быть открыт для записи\n", realpath('file.csv'));
         }
         return self::$single;
     }
@@ -123,7 +125,7 @@ class dishonestsupplier_scenario extends scenario {
             }
             if($this->noanycsv){
               print_r([$res['inn'], $res['registryNum'], date("Y-m-d H:i:s", strtotime($res['publishDate'])), $res['type'], $res['name'], $res['reson'], $name . ' ' . $filename]);
-            } else {
+            } else if(!empty($this->csv_handle)){
               fputcsv($this->csv_handle, [$res['inn'], $res['registryNum'], date("Y-m-d H:i:s", strtotime($res['publishDate'])), $res['type'], $res['name'], $res['reson'], $name . ' ' . $filename], ';');
             }
         } else {
@@ -200,8 +202,12 @@ class dishonestsupplier_scenario extends scenario {
       $this->noanycsv=true;
       if (false !== strpos($name, ' ')) {
         list($f, $zip) = explode(' ', $name);
-        $transport = $this->get_transport();
-        $zipf = $transport->get($zip);
+        if(basename($zip)!=basename($zipfile)) {
+          $transport = $this->get_transport();
+          $zipf = $transport->get($zip);
+        } else {
+          $zipf=$zipfile;
+        }
         $this->open_zip($zipf, ' ', $f, date("Y-m-d H:i:s"));
       } else {
         echo $zipfile . PHP_EOL;

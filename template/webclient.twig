@@ -231,11 +231,12 @@
         });
 		$(document).on('click', '.postaction', function () {
 			var href=$(this).attr('href');
-			if(''==href) href=location.href;
+			if(!href || ''==href) href=location.href;
 			var data='todo='+$(this).attr('data-action');
 			$.post(
 				href,data
             );
+			console.log('send '+$(this).attr('data-action'));
 			return false;
 		});
         console.log(location.hash);

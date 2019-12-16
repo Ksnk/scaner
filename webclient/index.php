@@ -21,18 +21,21 @@ include_once "../autoload.php";
 
 \Autoload::map([USE_NAMESPACE => '']);
 
-ENGINE::start_session();
 $joblist = new joblist();
 
+// акция ДО старта сессии. Это важно.
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    /**
-     * кнопки пауза-стоп
-     */
-    if (($action = \UTILS::val($_POST, 'todo')) !== '') {
-        joblist::action($action);
-        exit;
-    }
-    /**
+  /**
+   * кнопки пауза-стоп
+   */
+  if (($action = \UTILS::val($_POST, 'todo')) !== '') {
+    joblist::action($action);
+    exit;
+  }
+}
+ENGINE::start_session();
+if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+  /**
      * запрос на выполнение очередного цикла выполнения
      */
     if (UTILS::val($_GET, 'target') == 'iframe') { //?callback=log&target=iframe)
