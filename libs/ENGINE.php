@@ -1166,7 +1166,7 @@ UA:"{{HTTP_USER_AGENT}}"', array('type' => 'session',
             echo self::$db->report();
         }
 
-        printf("%f sec spent (%s)"
+        printf("%.03f sec spent (%s)"
             , microtime(true) - self::$start_time, date("Y-m-d H:i:s"));
         echo '-->';
     }

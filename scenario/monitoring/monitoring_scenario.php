@@ -28,7 +28,7 @@ namespace Ksnk\scaner;
  */
 class monitoring_scenario extends scenario
 {
-
+ var $trace = [];
     function csvquote($data,$quote='"'){
       if(is_array($data)){
         $result=[];
@@ -188,6 +188,72 @@ class monitoring_scenario extends scenario
       } else {
         return null;
       }
+    }
+
+    function longedit($pos,$len,$newval){
+      echo $pos,' ',$len,' ', $newval, "\n";
+      $this->trace[]=[$pos,$len, $newval];
+    }
+
+    function update($fname){
+      $src=fopen($fname,'r');
+      $dst=fopen($fname.'(1)','w+');
+      $start=0;
+      foreach($this->trace as $t){
+        stream_copy_to_stream($src,$dst,$t[0]-$start);
+        $start=$t[0]+$t[1];
+        fseek($src,$t[1],SEEK_CUR);
+        fwrite($dst,$t[2]);
+      }
+      $start+=stream_copy_to_stream($src,$dst);
+
+/*      rewind ($dst);rewind ($src);
+      $x=stream_copy_to_stream($dst,$src,$start);
+      echo $x; */
+      fclose($src);
+      fclose($dst);
+    }
+
+    /**
+     *  перенумеровать все номера
+     */
+    function do_renumber($date=''){
+      if(empty($date))$date=time();
+      else $date=strtotime($date);
+      /** @var scaner $scaner */
+      $scaner = $this->scaner;
+      $scaner->newhandle(self::reghtml);
+      $curr=1;
+      $pastpos=0;
+      do {
+        $scaner
+          ->scan('~<tr class=["\']row_org\s+row_reg_(?:(?!<td).)*?<td(?:(?!<td).)*?div>\s*(\d+?\s*)<~smi',1,'num');
+        if ($scaner->found) {
+          $res=$scaner->getResult();
+          $num=\UTILS::val($res,'num');
+          $pastpos=$scaner->getpos();
+          if($curr!=$num) {
+            $this->longedit($pastpos-1-strlen($num), strlen($num),$curr);
+            $curr++;
+          } else {
+            $curr++;
+          }
+          //echo \UTILS::val($res,'num').' ';
+        } else
+          break;
+      } while (true);
+      $scaner->position($pastpos);
+      // /files/opendata/reestroi/data-20191206-structure-20171024.csv
+      $res=$scaner->scan('~/files/opendata/reestroi/data\-(\d+)(\-structure\-20171024\.csv)~smi',1,'date',2,'tail')->getResult();
+      $this->longedit($scaner->getpos()-strlen($res['tail'])-strlen($res['date']), strlen($res['date']),date('Ymd',$date));
+      $res=$scaner->scan('~/files/opendata/reestroi/data\-(\d*)(\-structure\-20171024\.csv)~smi',1,'date',2,'tail')->getResult();
+      $this->longedit($scaner->getpos()-strlen($res['tail'])-strlen($res['date']), strlen($res['date']),date('Ymd',$date));
+
+      $res=$scaner->scan('~Дата последнего внесения изменений.*?>(\d\d\.\d\d.\d\d\d\d)~smi',1,'date')->getResult();
+      $this->longedit($scaner->getpos()-strlen($res['date']), strlen($res['date']),date('d.m.Y',$date));
+      $res=$scaner->scan('~Дата актуальности.*?>(\d\d\.\d\d.\d\d\d\d)~smi',1,'date')->getResult();
+      $this->longedit($scaner->getpos()-strlen($res['date']), strlen($res['date']),date('d.m.Y',strtotime('+1 month',$date)));
+      $this->update(self::reghtml);
     }
 
     /**

@@ -24,15 +24,16 @@ class testsftp_scenario extends \Ksnk\scaner\scenario {
     $top=10;$bot=10;$cnt=0;$bots=[];
     while(!empty($r=$csv->nextRow())) {
       $cnt++;
-      if ($top-- > 0) {
-        printf("%s\n",json_encode($r, JSON_ERROR_NONE + JSON_UNESCAPED_UNICODE));
+      if ($cnt<=$top) {
+        printf("%s\n",str_replace('\\/','/',str_replace('\\"','"',json_encode($r, JSON_ERROR_NONE + JSON_UNESCAPED_UNICODE))));
       } else
         $bots[] = $r;
       if (count($bots) > $bot) array_shift($bots);
     }
-    echo "...\n";
+    if($cnt>$top+$bot)
+      echo "...\n";
     foreach($bots as $r)
-      printf("%s\n",json_encode($r, JSON_ERROR_NONE + JSON_UNESCAPED_UNICODE));
+      printf("%s\n",str_replace('\\/','/',str_replace('\\"','"',json_encode($r, JSON_ERROR_NONE + JSON_UNESCAPED_UNICODE))));
     printf("total %s lines\n",$cnt);
   }
   /**

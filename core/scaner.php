@@ -198,7 +198,7 @@ class scaner
                         $this->buf = mb_substr($this->buf, 0, $x+1,'8bit');
                     }
                 } else {
-                  $this->finish=$this->filestart+mb_strlen($this->buf,'8bit');
+                  $this->finish=$this->filestart+$this->start+mb_strlen($this->buf,'8bit');
                 }
 
                 $this->filestart += $this->start;
