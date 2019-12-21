@@ -23,19 +23,19 @@ include_once "../autoload.php";
 
 $joblist = new joblist();
 
-// акция ДО старта сессии. Это важно.
+// акция до старта сессии. Это важно.
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-  /**
-   * кнопки пауза-стоп
-   */
-  if (($action = \UTILS::val($_POST, 'todo')) !== '') {
-    joblist::action($action);
-    exit;
-  }
+    /**
+     * кнопки пауза-стоп
+     */
+    if (($action = \UTILS::val($_POST, 'todo')) !== '') {
+        joblist::action($action);
+        exit;
+    }
 }
 ENGINE::start_session();
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-  /**
+    /**
      * запрос на выполнение очередного цикла выполнения
      */
     if (UTILS::val($_GET, 'target') == 'iframe') { //?callback=log&target=iframe)
@@ -100,7 +100,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $res = x_parser::getParameters('', $class, $top['dir']);
             $param = array();
             foreach ($res[$class][$method]['param'] as $name => $par) {
-                $param[] = \UTILS::val($_POST,$action.'|'.$name);
+                $param[] = \UTILS::val($_POST, $action . '|' . $name);
             }
             $joblist->append_scenario($top, $param);
         }
@@ -111,7 +111,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
     $debug = ob_get_contents();
     ob_end_clean();
-    $par = (!empty($_SERVER['HTTPS']) && 'off' !== strtolower($_SERVER['HTTPS'])?'https://':'http://') . $_SERVER["HTTP_HOST"].$_SERVER["REQUEST_URI"];
+    $par = (!empty($_SERVER['HTTPS']) && 'off' !== strtolower($_SERVER['HTTPS']) ? 'https://' : 'http://') . $_SERVER["HTTP_HOST"] . $_SERVER["REQUEST_URI"];
 
     if (\UTILS::val($headers, "X-Requested-With") == "XMLHttpRequest") {
         //header("Content-Type: application/json");
@@ -194,12 +194,11 @@ if (!empty($_GET['tag'])) {
 $tags = array();
 
 $data = array();
-\UTILS::findFiles('../scenario/*/*_scenario.php',function($sc)use(&$tags,&$filter,&$tag,&$data){
+\UTILS::findFiles('../scenario/*/*_scenario.php', function ($sc) use (&$tags, &$filter, &$tag, &$data) {
     $classname = USE_NAMESPACE . basename($sc, '.php');
     $res = x_parser::getParameters('', $classname, realpath($sc));
-    //var_export($tag);
     foreach ($res[$classname] as $method => $val) {
-        if (preg_match('/^do_(.*)$/', $method)) {
+        if (preg_match('/^do_/', $method)) {
             $tags = array_merge($tags, $res['tags']);
             break;
         }
@@ -209,19 +208,18 @@ $data = array();
         return 0;
     }
     if (empty($res) || empty($res[$classname]) || !preg_match($filter, $classname)) {
-        //ENGINE::debug($filter,$res);
         return 0;
     }
     foreach ($res[$classname] as $method => $val) {
-
-        if (!preg_match('/^do_(.*)$/', $method)) continue;
+        if (!preg_match('/^do_(.*)$/', $method))
+            continue;
 
         $res = '';
         foreach ($val['param'] as $name => $par) {
             $par['class'][] = "form-control";
             $par['parname'] = $name;
 
-            $res .= x_parser::createInput($par, \UTILS::val($_SESSION,'form', []));
+            $res .= x_parser::createInput($par, \UTILS::val($_SESSION, 'form', []));
         }
         $data[] = array(
             'title' => $val['title'],
@@ -231,6 +229,7 @@ $data = array();
             'anchor' => urlencode($val['title']),
         );
     }
+    return null;
 });
 
 ob_start();

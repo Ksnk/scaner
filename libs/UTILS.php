@@ -6,28 +6,30 @@
  * Time: 12:36
  */
 
-class UTILS {
-    
-    static $months_rp=array('Января','Февраля','Марта','Апреля','Мая','Июня','Июля','Августа','Сентября','Октября','Ноября','Декабря');
-
-    static  function translit($text)
+class UTILS
 {
-    $ar_latin=array('a', 'b', 'v', 'g', 'd', 'e', 'jo', 'zh', 'z', 'i', 'j', 'k',
-        'l', 'm', 'n', 'o', 'p', 'r', 's', 't', 'u', 'f', 'h', 'c', 'ch', 'sh', 'shh',
-        '', 'y', '', 'je', 'ju', 'ja', 'je', 'i');
-    $text = trim(str_replace(array('а', 'б', 'в', 'г', 'д', 'е', 'ё', 'ж', 'з', 'и', 'й', 'к',
+
+    static $months_rp = array('Января', 'Февраля', 'Марта', 'Апреля', 'Мая', 'Июня', 'Июля', 'Августа', 'Сентября', 'Октября', 'Ноября', 'Декабря');
+
+    static function translit($text)
+    {
+        $ar_latin = array('a', 'b', 'v', 'g', 'd', 'e', 'jo', 'zh', 'z', 'i', 'j', 'k',
+            'l', 'm', 'n', 'o', 'p', 'r', 's', 't', 'u', 'f', 'h', 'c', 'ch', 'sh', 'shh',
+            '', 'y', '', 'je', 'ju', 'ja', 'je', 'i');
+        $text = trim(str_replace(array('а', 'б', 'в', 'г', 'д', 'е', 'ё', 'ж', 'з', 'и', 'й', 'к',
             'л', 'м', 'н', 'о', 'п', 'р', 'с', 'т', 'у', 'ф', 'х', 'ц', 'ч', 'ш', 'щ',
             'ъ', 'ы', 'ь', 'э', 'ю', 'я', 'є', 'ї'),
-        $ar_latin, $text));
-    $text = trim(str_replace(array('А', 'Б', 'В', 'Г', 'Д', 'Е', 'Ё', 'Ж', 'З', 'И', 'Й', 'К',
-            'Л', 'М', 'Н', 'О', 'П', 'Р', 'С', 'Т', 'У', 'Ф', 'Х', 'Ц', 'Ч', 'Ш', 'Щ',
-            'Ъ', 'Ы', 'Ь', 'Э', 'Ю', 'Я', 'Є', 'Ї')
-        , $ar_latin, $text));
-    return $text;
-}
+            $ar_latin, $text));
+        $text = trim(str_replace(array('А', 'Б', 'В', 'Г', 'Д', 'Е', 'Ё', 'Ж', 'З', 'И', 'Й', 'К',
+                'Л', 'М', 'Н', 'О', 'П', 'Р', 'С', 'Т', 'У', 'Ф', 'Х', 'Ц', 'Ч', 'Ш', 'Щ',
+                'Ъ', 'Ы', 'Ь', 'Э', 'Ю', 'Я', 'Є', 'Ї')
+            , $ar_latin, $text));
+        return $text;
+    }
 
 
-    static function detectUTF8 ($string){
+    static function detectUTF8($string)
+    {
         return preg_match('%(?:
        [\xC2-\xDF][\x80-\xBF]        		# non-overlong 2-byte
        |\xE0[\xA0-\xBF][\x80-\xBF]          # excluding overlongs
@@ -44,20 +46,23 @@ class UTILS {
      * @param bool $print
      * @return mixed
      */
-    static function mkt($print=false,$save=true){
-        static $tm ; $ttm = $tm ; if($save)$tm= microtime(1) ;
-        if($print) {
-            printf(" %.03f sec spent%s (%s)\n" ,$tm-$ttm,is_string($print)?' for '.$print:'',date("Y-m-d H:i:s"));
+    static function mkt($print = false, $save = true)
+    {
+        static $tm;
+        $ttm = $tm;
+        if ($save) $tm = microtime(1);
+        if ($print) {
+            printf(" %.03f sec spent%s (%s)\n", $tm - $ttm, is_string($print) ? ' for ' . $print : '', date("Y-m-d H:i:s"));
             return false;
         } else
-            return microtime(1)-$ttm;
+            return microtime(1) - $ttm;
     }
 
-    static function sphinxSearch($q, $index = 'titles',$match=7,$limit=30)
+    static function sphinxSearch($q, $index = 'titles', $match = 7, $limit = 30)
     {
-        $suffix='';//' @brand 74606'; // Ищем только Стокке
+        $suffix = '';//' @brand 74606'; // Ищем только Стокке
         if (empty($q)) return '';
-        if(!UTILS::detectUTF8($q))$q=iconv('cp1251','utf-8',$q);
+        if (!self::detectUTF8($q)) $q = iconv('cp1251', 'utf-8', $q);
 
         require_once $_SERVER["DOCUMENT_ROOT"] . "/../lapsi.msk.ru/az/helpers/sphinxapi.php";
         $cl = new SphinxClient();
@@ -69,25 +74,25 @@ class UTILS {
 
         // поиск строки по названиям
         while (true) {
-            if($match & 1){
-            $cl->SetLimits(0, $limit);
-            $cl->SetMatchMode(SPH_MATCH_ALL);
-
-            $q_matches = $cl->Query(html_entity_decode($q, ENT_NOQUOTES, 'UTF-8').$suffix, $index);
-            if (is_array($q_matches) && isset($q_matches["matches"])) break;
-            }
- /*           if($match & 4){
+            if ($match & 1) {
                 $cl->SetLimits(0, $limit);
                 $cl->SetMatchMode(SPH_MATCH_ALL);
-                    $q_matches = $cl->Query('*' . preg_replace('/\s+/', '* *', html_entity_decode(strtr($q, '-(), .', '     ') . '*', ENT_NOQUOTES, 'UTF-8')).$suffix, $index);
-            if (is_array($q_matches) && isset($q_matches["matches"])) break;
 
-            }*/
-            if($match & 2){
-            $cl->SetLimits(0, $limit);
-            $cl->SetMatchMode(SPH_MATCH_ANY);
-            $q_matches = $cl->Query(html_entity_decode($q, ENT_NOQUOTES, 'UTF-8').$suffix, $index);
-            if (is_array($q_matches) && isset($q_matches["matches"])) break;
+                $q_matches = $cl->Query(html_entity_decode($q, ENT_NOQUOTES, 'UTF-8') . $suffix, $index);
+                if (is_array($q_matches) && isset($q_matches["matches"])) break;
+            }
+            /*           if($match & 4){
+                           $cl->SetLimits(0, $limit);
+                           $cl->SetMatchMode(SPH_MATCH_ALL);
+                               $q_matches = $cl->Query('*' . preg_replace('/\s+/', '* *', html_entity_decode(strtr($q, '-(), .', '     ') . '*', ENT_NOQUOTES, 'UTF-8')).$suffix, $index);
+                       if (is_array($q_matches) && isset($q_matches["matches"])) break;
+
+                       }*/
+            if ($match & 2) {
+                $cl->SetLimits(0, $limit);
+                $cl->SetMatchMode(SPH_MATCH_ANY);
+                $q_matches = $cl->Query(html_entity_decode($q, ENT_NOQUOTES, 'UTF-8') . $suffix, $index);
+                if (is_array($q_matches) && isset($q_matches["matches"])) break;
             }
 
         }
@@ -106,38 +111,39 @@ class UTILS {
      * @param $mask
      * @return array
      */
-    static function scanPharFile($phar,$mask){
-        if(!$phar instanceof Phar){
-            $phar=new Phar($phar);
+    static function scanPharFile($phar, $mask)
+    {
+        if (!$phar instanceof Phar) {
+            $phar = new Phar($phar);
         }
         $iterator = new RecursiveIteratorIterator($phar);
-        $result=array();
+        $result = array();
         /** @var $f PharFileInfo */
-        foreach($iterator  as  $f) if (preg_match($mask,$f)){
-           // echo ' found '.$f."\n";
-            $result[]=$f;
+        foreach ($iterator as $f) if (preg_match($mask, $f)) {
+            // echo ' found '.$f."\n";
+            $result[] = $f;
         }
         return $result;
     }
 
-    private static function _relist(&$curr,&$result,$path){
-        foreach($curr as $x=>&$y){
-            if(!is_array($y))
-                $result[]=$path.'|'.$x;
+    private static function _relist(&$curr, &$result, $path)
+    {
+        foreach ($curr as $x => &$y) {
+            if (!is_array($y))
+                $result[] = $path . '|' . $x;
             else
-                UTILS::_relist($y,$result,$path.'|'.$x);
+                self::_relist($y, $result, $path . '|' . $x);
         }
     }
 
-    static function getallheaders(){
-        if (function_exists('getallheaders')){
+    static function getallheaders()
+    {
+        if (function_exists('getallheaders')) {
             return getallheaders();
         } else {
             $headers = array();
-            foreach ($_SERVER as $name => $value)
-            {
-                if (substr($name, 0, 5) == 'HTTP_')
-                {
+            foreach ($_SERVER as $name => $value) {
+                if (substr($name, 0, 5) == 'HTTP_') {
                     $headers[str_replace(' ', '-', ucwords(strtolower(str_replace('_', ' ', substr($name, 5)))))] = $value;
                 }
             }
@@ -145,21 +151,22 @@ class UTILS {
         }
     }
 
-    static function uploadedFiles(){
-        $uploaded=array();
-        $paths=array();
+    static function uploadedFiles()
+    {
+        $uploaded = array();
+        $paths = array();
 
-        foreach($_FILES as $x=>$y){
-            if(!empty($_FILES[$x]['name'])){
-                UTILS::_relist($_FILES[$x]['name'],$paths,$x.'|{{}}');
+        foreach ($_FILES as $x => $y) {
+            if (!empty($_FILES[$x]['name'])) {
+                self::_relist($_FILES[$x]['name'], $paths, $x . '|{{}}');
             }
         }
-        foreach($paths as $p){
-            $uploaded[]=array(
-                'name'=>UTILS::val($_FILES,str_replace('{{}}','name',$p),'x'),
-                'error'=>UTILS::val($_FILES,str_replace('{{}}','error',$p),'x'),
-                'tmp_name'=>UTILS::val($_FILES,str_replace('{{}}','tmp_name',$p),'x'),
-                'path'=>$p
+        foreach ($paths as $p) {
+            $uploaded[] = array(
+                'name' => self::val($_FILES, str_replace('{{}}', 'name', $p), 'x'),
+                'error' => self::val($_FILES, str_replace('{{}}', 'error', $p), 'x'),
+                'tmp_name' => self::val($_FILES, str_replace('{{}}', 'tmp_name', $p), 'x'),
+                'path' => $p
             );
         }
         return $uploaded;
@@ -181,12 +188,12 @@ class UTILS {
     static function masktoreg($mask, $last = true, $isfilemask = true)
     {
         if (!empty($mask) && $mask{0} == '/') return $mask; // это уже регулярка
-        if($isfilemask){
-            $star='[^:/\\\\\\\\]';//
-            $mask=explode('|',$mask);
+        if ($isfilemask) {
+            $star = '[^:/\\\\\\\\]';//
+            $mask = explode('|', $mask);
         } else {
-            $star='.';//
-            $mask=array($mask);
+            $star = '.';//
+            $mask = array($mask);
         }
         /* so create mask */
         $regs = array(
@@ -204,29 +211,30 @@ class UTILS {
             '/@@1@@/' => '\]',
             '/@@0@@/' => '\[',
         );
-        $r=array();
-        foreach($mask as $m)
-            $r[]=preg_replace(
+        $r = array();
+        foreach ($mask as $m)
+            $r[] = preg_replace(
                     array_keys($regs), array_values($regs), $m
                 ) . ($last ? '$' : '');
-        return '#' . implode('|',$r). '#iu';
+        return '#' . implode('|', $r) . '#iu';
     }
 
-    static function val($rec,$disp,$default=''){
-        $x=explode('|',$disp);
-        $v=$rec;
-        foreach($x as $xx){
-            if(is_object($v)){
-                if(property_exists($v,$xx)){
-                    $v=$v->$xx;
+    static function val($rec, $disp, $default = '')
+    {
+        $x = explode('|', $disp);
+        $v = $rec;
+        foreach ($x as $xx) {
+            if (is_object($v)) {
+                if (property_exists($v, $xx)) {
+                    $v = $v->$xx;
                 } else {
-                    $v=$default;
+                    $v = $default;
                     break;
                 }
-            } elseif(isset($v[$xx])){
-                $v=$v[$xx];
+            } elseif (isset($v[$xx])) {
+                $v = $v[$xx];
             } else {
-                $v=$default;
+                $v = $default;
                 break;
             }
         }
@@ -238,28 +246,29 @@ class UTILS {
      * Scaning direcory by mask + call callback then found
      * @param array $dirs
      * @param callable|null $callback
-     * @return array
+     * @return string|array
      */
-    static function findFiles($dirs,$callback=null){
-        $result=array();
-        if(!is_array($dirs)) $dirs=[$dirs];
-        foreach($dirs as $dir){
-            $mask=UTILS::masktoreg($dir);
-            list($ddir,$rest)=preg_split('~[^/]*[\*\?]~',$dir,2);
+    static function findFiles($dirs, $callback = null)
+    {
+        $result = array();
+        if (!is_array($dirs)) $dirs = [$dirs];
+        foreach ($dirs as $dir) {
+            $mask = self::masktoreg($dir);
+            list($ddir, $rest) = preg_split('~[^/]*[\*\?]~', $dir, 2);
             $iterator = new RecursiveIteratorIterator(
                 new RecursiveDirectoryIterator($ddir), RecursiveIteratorIterator::CHILD_FIRST
             );
             /** @var \SplFileInfo $path */
             foreach ($iterator as $path) {
-                if ($path->isFile() && preg_match($mask,$path->getPathname())) {
-                    $name=str_replace("\\",'/',
-                        str_replace(dirname(__FILE__).DIRECTORY_SEPARATOR , '', $path->getPathname()));
-                    $res=1;
-                    if(!is_null($callback)) $res=$callback($name);
-                    if($res===false){
+                if ($path->isFile() && preg_match($mask, $path->getPathname())) {
+                    $name = str_replace("\\", '/',
+                        str_replace(dirname(__FILE__) . DIRECTORY_SEPARATOR, '', $path->getPathname()));
+                    $res = 1;
+                    if (!is_null($callback)) $res = $callback($name);
+                    if ($res === false) {
                         break 2;
-                    } else if($res){
-                        $result[]=$name;
+                    } else if ($res) {
+                        $result[] = $name;
                     }
                 }
             }
