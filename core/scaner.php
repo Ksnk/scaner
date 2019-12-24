@@ -376,7 +376,7 @@ class scaner
                 if (false === $x) {
                     $this->start = mb_strlen($this->buf, '8bit');
                 } else {
-                    $this->start = $x;
+                    $this->start = $x+1;
                 }
                 if ($this->prepare()) {
                     continue;
@@ -530,6 +530,7 @@ class scaner
         }
         $this->position($till);
     }
+
 
     function error($msg)
     {

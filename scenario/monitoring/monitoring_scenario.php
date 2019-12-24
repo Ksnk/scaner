@@ -152,7 +152,7 @@ class monitoring_scenario extends scenario
         'tag' => 'tr|td|div',
         'open' => '<:tag:(?::attr:|)>',
         'close' => '</:tag:>',
-      ], '~:open:|:close:~sm',
+      ], '~:open:|:close:~smu',
         function ($line) use (&$_) {
           //echo htmlspecialchars(print_r($line, true));
 
@@ -164,7 +164,7 @@ class monitoring_scenario extends scenario
           }
           if (\UTILS::val($line, 'open') != '' && $line['tag'] == 'td') {
 
-            if (count($_->struct[0]) > 0)
+            if (isset($_->struct[0]) && count($_->struct[0]) > 0)
               for ($i = 0; $i < count($_->struct[0]); $i++) {
                 if (isset($_->struct[$_->trcnt][$_->tdcnt])) $_->tdcnt++; else break;
               }
@@ -291,7 +291,8 @@ class monitoring_scenario extends scenario
     $this->scaner->until('/Создаваемые организации инфраструктуры/ui');
     $result=null;
     $_ = function ($where) use (&$result) {
-      return \UTILS::val($result,'values|'.$where);
+      return
+        \UTILS::val($result,'values|'.$where);
     };
     $fh=fopen('data-'.date('Ymd',$date).'-structure-20171024.csv','w+');
     fwrite($fh,csv::BOM);
@@ -411,7 +412,7 @@ class monitoring_scenario extends scenario
    * @param $a :textarea
    * @param $b :textarea
    */
-  function do_test_excel_input($code = '', $date = '', $a, $b)
+  function do_test_excel_input($code = '', $date = '', $a='', $b='')
   {
     if (empty($code)) {
       // читаем последнюю запись в файле
