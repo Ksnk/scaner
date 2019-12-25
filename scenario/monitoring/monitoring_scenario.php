@@ -212,7 +212,9 @@ class monitoring_scenario extends scenario
             $_->trcnt++;
             $_->rowcnt -= 1;
             //printf(' rowcnt: %s', $_->rowcnt);
-            if ($_->rowcnt <= 0) return false;
+            if ($_->rowcnt <= 0) {
+                return false;
+            }
           }
           return true;
         });

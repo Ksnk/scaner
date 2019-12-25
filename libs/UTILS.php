@@ -244,9 +244,9 @@ class UTILS
     /**
      * the future is come... sure...
      * Scaning direcory by mask + call callback then found
-     * @param array $dirs
+     * @param array|string $dirs
      * @param callable|null $callback
-     * @return string|array
+     * @return array
      */
     static function findFiles($dirs, $callback = null)
     {
