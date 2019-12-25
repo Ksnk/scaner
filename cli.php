@@ -5,69 +5,27 @@
  * Date: 29.11.15
  * Time: 17:25
  */
+use
+    \Ksnk\scaner\joblist,
+    \Ksnk\scaner\x_parser;
+
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
+
+define('USE_NAMESPACE', 'Ksnk\\scaner\\');
+define('TEMP_DIR', 'temp/');
+
 $baseDir = dirname(__FILE__);
-if(preg_match('/\b(\w+\.phar)$/',__FILE__,$m))
-    define('INDEX_DIR',"phar://".$m[1]);
+
+if (preg_match('/\b(\w+\.phar)$/', __FILE__, $m))
+    define('INDEX_DIR', "phar://" . $m[1]);
 else
-    define('INDEX_DIR',$baseDir);
-//echo $baseDir." ".__FILE__."\n";
-include_once INDEX_DIR."/autoload.php";
+    define('INDEX_DIR', $baseDir);
 
-function __(&$x, $default = '')
+include_once INDEX_DIR . "/autoload.php";
+
+function parseParameters($noopt = array())
 {
-    return empty($x) ? $default : $x;
-}
-
-class action
-{
-
-    var $config = array(
-        //'log_directory' => '/home/lapsi/data/logs/*.gz',
-        'log_directory' => 'scenario/lapsi.log/*.{gz,log}',
-        'articul_directory' => 'scenario/evrosvet/*.txt'
-    );
-
-    function __get($name){
-        switch($name){
-            case "joblist":
-                return ($this->$name= new joblist());
-        }
-        return '';
-    }
-
-    /**
-     * Сканирование логов по IP
-     * @param string $log :select[:все|~dir(config.log_directory)] лог для поиска
-     * @param string $ip :text IP для поиска
-     */
-    function do_parse_logs($log, $ip)
-    {
-        $this->joblist->append_scenario(array('dir'=>'scenario/lapsi.log/','class="grep_logs_scenario','method'=>'scan_access_log'),$log, $ip);
-    }
-
-    /**
-     * Чтение товаров из Евросети
-     * @param string $articul :select[:все|~dir(config.articul_directory)] лог для поиска
-     */
-    function do_readevroset($articul)
-    {
-        include_once 'scenario/evrosvet/evroset_scan_scenario.php';
-        $obj = new evroset_scan_scenario();
-        $obj->initialize(array(
-            'archive' => 'archive.zip',
-            'excelfile' => 'evrosvet.xlsx',
-            'articul_txt' => iconv('utf-8','cp1251',$articul),
-            'phpexcel_path'=>'../youlamp/PHPExcel.1.8/',
-            'pclzip_path'=>'../youlamp/admin/libs/',
-        ));
-    }
-}
-
-$a = new action();
-
-function parseParameters($noopt = array()) {
     $result = array();
     $params = $GLOBALS['argv'];
     // could use getopt() here (since PHP 5.3.0), but it doesn't work relyingly
@@ -96,65 +54,101 @@ function parseParameters($noopt = array()) {
     return $result;
 }
 
-if (''==ini_get('date.timezone')) {
+if ('' == ini_get('date.timezone')) {
     date_default_timezone_set('UTC');
 }
 
-if (PHP_SAPI === 'cli'){
-    $par=array(
-        'iconv.input_encoding'=>'cp1251',
-        'iconv.internal_encoding'=>'UTF-8',
-        'iconv.output_encoding'=>'UTF-8//ignore',
+if (PHP_SAPI === 'cli') {
+    $par = array(
+        'input_encoding' => 'cp1251',
+        'internal_encoding' => 'UTF-8',
+        'output_encoding' => 'UTF-8//ignore',
     );
-    if(empty($_ENV) || isset($_ENV['PROMPT']))
-        $par['iconv.output_encoding']='cp866//ignore';
+    if (empty($_ENV) || isset($_ENV['PROMPT']))
+        $par['output_encoding'] = 'cp866//ignore';
     ob_start('ob_iconv_handler');
-    foreach($par as $k=>$v)ini_set($k,$v);
+    foreach ($par as $k => $v) ini_set($k, $v);
 
-    $parameters=parseParameters();
-   // print_r($parameters);
-    $mask=UTILS::masktoreg('scenario/*/*_scenario.php');
-    $result=UTILS::scanPharFile(__FILE__,$mask);
-   // print_r($result);
-
-    $scenariofiles=array_merge(
-        glob(INDEX_DIR.'/scenario/*/*_scenario.php'),
-        $result
-    );
-   //print_r($scenariofiles);
-    try {
-        $action = __($parameters[1]);
-        list($class,$method,$empty)=explode('::',$action.'::::',3);
-        $res=false;$dir='';
-        foreach($scenariofiles as $sc){
-            $classname=basename($sc,'.php');
-            $resx = x_parser::getParameters('', $classname,$sc);
-           // print_r($resx);
-            if(isset($resx[$class])){
-                $dir=$sc;
-                $res=$resx;
+    $parameters = parseParameters();
+    $mask = UTILS::masktoreg('scenario/*/*_scenario.php');
+    $urlp=pathinfo(__FILE__);
+    if($urlp['extension']=='phar')
+        $result = UTILS::scanPharFile(__FILE__, $mask);
+    $data = array();
+    \UTILS::findFiles($mask, function ($sc) use (&$tags, &$filter, &$tag, &$data) {
+        $classname = USE_NAMESPACE . basename($sc, '.php');
+        $res = x_parser::getParameters('', $classname, realpath($sc));
+        foreach ($res[$classname] as $method => $val) {
+            if (preg_match('/^do_/', $method)) {
+                $tags = array_merge($tags, $res['tags']);
                 break;
             }
         }
-        if($res){
-          //  print_r($res);
-            $top = array('class'=>$class,'method'=>$method,'dir'=>$dir);
-            $param=array();
+        if (!in_array($tag, $res['tags'])) {
+            // var_export($res['tags']);
+            return 0;
+        }
+        if (empty($res) || empty($res[$classname]) || !preg_match($filter, $classname)) {
+            return 0;
+        }
+        foreach ($res[$classname] as $method => $val) {
+            if (!preg_match('/^do_(.*)$/', $method))
+                continue;
+
+            $res = '';
+            foreach ($val['param'] as $name => $par) {
+                $par['class'][] = "form-control";
+                $par['parname'] = $name;
+
+                $res .= x_parser::createInput($par, \UTILS::val($_SESSION, 'form', []));
+            }
+            $data[] = array(
+                'title' => $val['title'],
+                'method' => htmlspecialchars($classname . '::' . $method),
+                'res' => trim($res),
+                'sc' => htmlspecialchars($sc),
+                'anchor' => urlencode($val['title']),
+            );
+        }
+        return null;
+    });
+    $scenariofiles = array_merge(
+        glob(INDEX_DIR . '/scenario/*/*_scenario.php'),
+        $result
+    );
+    //print_r($scenariofiles);
+    // -- Ksnk\scaner\monitoring_scenario::do_renumber
+    try {
+        $action = UTILS::val($parameters,1);
+        list($class, $method, $empty) = explode('::', $action . '::::', 3);
+        $res = false;
+        $dir = '';
+        foreach ($scenariofiles as $sc) {
+            $classname = basename($sc, '.php');
+            $resx = x_parser::getParameters('', $classname, $sc);
+            // print_r($resx);
+            if (isset($resx[$class])) {
+                $dir = $sc;
+                $res = $resx;
+                break;
+            }
+        }
+        if ($res) {
+            //  print_r($res);
+            $top = array('class' => $class, 'method' => $method, 'dir' => $dir);
+            $param = array();
 
             foreach ($res[$class][$method]['param'] as $name => $par) {
-                //$param[] = stripslashes(__($_POST[$action][$name]));
-                if(isset($parameters[$name])){
+                if (isset($parameters[$name])) {
                     $param[] = $parameters[$name];
-                } else if(isset($par['default'])) {
+                } else if (isset($par['default'])) {
                     $param[] = $par['default'];
                 } else {
-                    echo 'Missing parameter '.$name;
+                    echo 'Missing parameter ' . $name;
                     exit;
                 }
-    //            $param[] = __($par[$name],$par['default']);
-
             }
-            $a->joblist->append_scenario($top,$param);
+            $a->joblist->append_scenario($top, $param);
         }
 
     } catch (Exception $e) {
@@ -162,5 +156,5 @@ if (PHP_SAPI === 'cli'){
         print_r($parameters);
     }
 
-    while($a->joblist->donext()){;}
+    $a->joblist->donext();
 }
