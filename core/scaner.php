@@ -477,7 +477,7 @@ class scaner
      * @param $pattern
      * @param $callback
      */
-    function syntax($tokens, $pattern, $callback)
+    function syntax($tokens, $pattern, $callback, $movepostotill=true)
     {
         // so build a reg
         $idx = array('_skiped');
@@ -528,7 +528,8 @@ class scaner
             }
             if (!$this->prepare(false)) break;
         }
-        $this->position($till);
+        if($movepostotill)
+          $this->position($till);
     }
 
 

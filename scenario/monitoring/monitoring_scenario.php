@@ -133,17 +133,18 @@ class monitoring_scenario extends scenario
     } else {
       // следующий код
       $scaner
-        ->until()
+      //  ->until()
         ->scan('~<\!\-\-|<tr class=["\']row_org\s+row_reg_(?:(?!<t).)*?<t(?:(?!<t).)*?div>\s*(\d+?\s*)<~smi', 1, 'num');
     }
     if ($scaner->found) {
       $pos=$scaner->reg_begin;
       $res = $scaner->getresult();
-      if (empty($res))
+      if (empty($res)) {
+        $scaner->scan('~\-\->~smi');
         return $this->get_ByCode();
-      $scaner
-          ->until('~<tr class=["\']row_org\s+row_reg_(?:(?!<t).)*?<t(?:(?!<t).)*?div>\s*(\d+?\s*)<~smi');
-      $scaner->position($pos - 1);
+      }
+      //$scaner->until('~<tr class=["\']row_org\s+row_reg_(?:(?!<t).)*?<t(?:(?!<t).)*?div>\s*(\d+?\s*)<~smi');
+      $scaner->position($pos );
       $scaner->syntax([
         'attr' => '\s*:name:\s*=\s*:quoted:',
         'name' => '\w+',
@@ -215,7 +216,7 @@ class monitoring_scenario extends scenario
             if ($_->rowcnt <= 0) return false;
           }
           return true;
-        });
+        }, false);
       return $_;
 
     } else {
@@ -225,8 +226,10 @@ class monitoring_scenario extends scenario
 
   /**
    *  перенумеровать все номера
+   * @param string $date :date Дата весения правок
+   * @param bool $createcsv :radio[0:Не надо|1:Создать] Сделать CSV
    */
-  function do_renumber($date = '')
+  function do_renumber($date = '', $createcsv=false)
   {
     if (empty($date)) $date = time();
     else $date = strtotime($date);
@@ -277,6 +280,9 @@ class monitoring_scenario extends scenario
     }
     $scaner->close();
     $editor->update();
+    if($createcsv){
+      $this->_importdata($date);
+    }
     echo "\nDone.";
   }
 
@@ -284,7 +290,7 @@ class monitoring_scenario extends scenario
    * Импортировать все в CSV
    * @param $date - Дата внесения правок
    */
-  function do_importdata($date='')
+  function _importdata($date='')
   {
     $date=empty($date)?time():strtotime($date);
     $this->scaner->newhandle(self::reghtml);
@@ -294,14 +300,23 @@ class monitoring_scenario extends scenario
       return
         \UTILS::val($result,'values|'.$where);
     };
-    $fh=fopen('data-'.date('Ymd',$date).'-structure-20171024.csv','w+');
+    $fh=fopen(dirname(self::reghtml).'/data-'.date('Ymd',$date).'-structure-20171024.csv','w+');
     fwrite($fh,csv::BOM);
     fputcsv($fh,['rec_no','registry_rec_no','registry_rec_created','registry_rec_modified','org_name_full','org_name_short','org_inn','org_reg_no_and_date','org_planned_creation_date','org_dept','org_type','support_form','support_services','support_conditions','support_requirements','support_amount','support_cost','org_address_egrul','org_address','org_phone_number','org_email','org_web_site','org_head_name','org_head_phone_number','org_head_email','budget_act','budget_act_ref','msp_program','msp_program_ref','legal_act','legal_act_ref','org_cert','org_cert_issuer'],';');
     $cnt=0;
+    $waitfor=1;
     while($result=$this->get_ByCode()){
       if(!isset($result->values['sub'])){
         $result->values['sub']=[[]];
       }
+      // контроль целостности исходной ьаблицы
+      if($_('_|0|0')!=$waitfor){
+        printf("waiting object `%s` instead of `%s`\n",$waitfor,$_('_|0|0'));
+        $waitfor=$_('_|0|0',0)+1;
+      } else {
+        $waitfor++;
+      }
+
       for( $i =0; $i<count($result->values['sub']);$i++ ) {
         if(strlen(trim($_('_|0|8')))>3) break 2;
         fputcsv($fh, [++$cnt,// rec_no
@@ -344,6 +359,7 @@ class monitoring_scenario extends scenario
       }
     }
     fclose($fh);
+    printf("Total: %s objects produced %s lines.\n",$waitfor-1,$cnt);
   }
 
   /**
