@@ -476,6 +476,7 @@ class scaner
      * @param $tokens
      * @param $pattern
      * @param $callback
+     * @param bool $movepostotill - переместить указатель на финальную границу области
      */
     function syntax($tokens, $pattern, $callback, $movepostotill=true)
     {
@@ -506,7 +507,7 @@ class scaner
                     $this->start = $m[0][1] + mb_strlen($m[0][0], '8bit');
                 }
                 if ($this->filestart + $this->start > $till) {
-                    $this->start = $m[0][1]; // не терять тег на границе буфера todo: oppa! строка то фиксированной длниы?
+                    $this->start = $m[0][1]; // не терять тег на границе буфера todo: oppa! строка то фиксированной длины?
                     break;
                 }
                 $r = array('_skiped' => $skiped);
