@@ -294,17 +294,66 @@ class monitoring_scenario extends scenario
    */
   function _importdata($date='')
   {
-    $date=empty($date)?time():strtotime($date);
+    if(!is_int($date))
+      $date=empty($date)?time():strtotime($date);
     $this->scaner->newhandle(self::reghtml);
     $this->scaner->until('/Создаваемые организации инфраструктуры/ui');
     $result=null;
-    $_ = function ($where) use (&$result) {
+    $_ = function ($where,$param=[]) use (&$result) {
+      if(is_array($where)){
+        $res=[];$from=[];$to=[];
+        foreach($param as $k=>$p){
+          $from[]='{'.$k.'}';
+          $to[]=$p;
+        }
+        foreach($where as $w){
+          if($w=='{cnt}')
+            $res[]=$param['cnt'];
+          else
+            $res[]=\UTILS::val($result,'values|'.str_replace($from,$to,$w));
+        }
+        return $res;
+      }
       return
         \UTILS::val($result,'values|'.$where);
     };
+    $row=['rec_no'=>'{cnt}'
+      ,'registry_rec_no'=>'_|0|1'
+      ,'registry_rec_created'=>'_|0|2'
+      ,'registry_rec_modified'=>'_|0|3'
+      ,'org_name_full'=>'_|0|4'
+      ,'org_name_short'=>'_|0|5'
+      ,'org_inn'=>'_|0|6'
+      ,'org_reg_no_and_date'=>'_|0|7'
+      ,'org_planned_creation_date'=>'_|0|8'
+      ,'org_dept'=>'sub|{i}|9'
+      ,'org_type'=>'sub|{i}|10'
+      ,'support_form'=>'sub|{i}|11'
+      ,'support_services'=>'sub|{i}|12'
+      ,'support_conditions'=>'sub|{i}|13'
+      ,'support_requirements'=>'sub|{i}|14'
+      ,'support_amount'=>'sub|{i}|15'
+      ,'support_cost'=>'sub|{i}|16'
+      ,'org_address_egrul'=>'_|0|17'
+      ,'org_address'=>'_|0|18'
+      ,'org_phone_number'=>'sub|{i}|19'
+      ,'org_email'=>'sub|{i}|20'
+      ,'org_web_site'=>'sub|{i}|21'
+      ,'org_head_name'=>'_|0|22'
+      ,'org_head_phone_number'=>'_|0|23'
+      ,'org_head_email'=>'_|0|24'
+      ,'budget_act'=>'low|0|26'
+      ,'budget_act_ref'=>'low|0|27'
+      ,'msp_program'=>'low|1|26'
+      ,'msp_program_ref'=>'low|1|27'
+      ,'legal_act'=>'low|2|26'
+      ,'legal_act_ref'=>'low|2|27'
+      ,'org_cert'=>'_|0|28'
+      ,'org_cert_issuer'=>'_|0|29'];
+
     $fh=fopen(dirname(self::reghtml).'/data-'.date('Ymd',$date).'-structure-20171024.csv','w+');
     fwrite($fh,csv::BOM);
-    fputcsv($fh,['rec_no','registry_rec_no','registry_rec_created','registry_rec_modified','org_name_full','org_name_short','org_inn','org_reg_no_and_date','org_planned_creation_date','org_dept','org_type','support_form','support_services','support_conditions','support_requirements','support_amount','support_cost','org_address_egrul','org_address','org_phone_number','org_email','org_web_site','org_head_name','org_head_phone_number','org_head_email','budget_act','budget_act_ref','msp_program','msp_program_ref','legal_act','legal_act_ref','org_cert','org_cert_issuer'],';');
+    fputcsv($fh,array_keys($row),';');
     $cnt=0;
     $waitfor=1;
     while($result=$this->get_ByCode()){
@@ -314,50 +363,15 @@ class monitoring_scenario extends scenario
       // контроль целостности исходной ьаблицы
       if($_('_|0|0')!=$waitfor){
         printf("waiting object `%s` instead of `%s`\n",$waitfor,$_('_|0|0'));
-        $waitfor=$_('_|0|0',0)+1;
+        $waitfor=$_('_|0|0')+1;
       } else {
         $waitfor++;
       }
+    // сливаем в таблицу
 
       for( $i =0; $i<count($result->values['sub']);$i++ ) {
         if(strlen(trim($_('_|0|8')))>3) break 2;
-        fputcsv($fh, [++$cnt,// rec_no
-          $_('_|0|1'), // registry_rec_no
-          $_('_|0|2'), // registry_rec_created
-          $_('_|0|3'), // registry_rec_modified
-          $_('_|0|4'), // org_name_full
-          $_('_|0|5'), // org_name_short
-          $_('_|0|6'), // org_inn
-          $_('_|0|7'), // org_reg_no_and_date
-          $_('_|0|8'), // org_planned_creation_date
-
-          $_('sub|'.$i.'|9'), // org_dept
-          $_('sub|'.$i.'|10'), // огрн
-          $_('sub|'.$i.'|11'), // огрн
-          $_('sub|'.$i.'|12'), // огрн
-          $_('sub|'.$i.'|13'), // огрн
-          $_('sub|'.$i.'|14'), // огрн
-          $_('sub|'.$i.'|15'), // огрн
-          $_('sub|'.$i.'|16'), // огрн
-          $_('_|0|17'), // адрес 1
-          $_('_|0|18'), // inn
-          $_('sub|'.$i.'|19'), // огрн
-          $_('sub|'.$i.'|20'), // огрн
-          $_('sub|'.$i.'|21'), // огрн
-          $_('_|0|22'), // inn
-          $_('_|0|23'), // inn
-          $_('_|0|24'), // inn
-
-          $_('low|0|26'), // inn
-          $_('low|0|27'), // inn
-          $_('low|1|26'), // inn
-          $_('low|1|27'), // inn
-          $_('low|2|26'), // inn
-          $_('low|2|27'), // inn
-
-          $_('_|0|28'), // inn
-          $_('_|0|29') // inn
-        ], ';');
+        fputcsv($fh, $_(array_values($row),['cnt'=>++$cnt,'i'=>$i]), ';');
       }
     }
     fclose($fh);
