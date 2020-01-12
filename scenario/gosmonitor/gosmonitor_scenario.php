@@ -65,6 +65,18 @@ class gosmonitor_scenario extends scenario {
         ];
     }
 
+    function find($names,$tit,&$lasttit,$second){
+        if(!empty($tit)) $lasttit=$tit;
+        foreach($names as $n){
+            if(preg_match('/'.preg_quote($n['delta']+1,'\.\s/').'/isu',$lasttit)
+            && preg_match('/'.preg_replace(['/\s+/','/\./'],['\\s+','.+?'],preg_quote(trim($n['name']),'/')).'/isu',$second)
+            ){
+                return $n;
+            }
+        }
+        return false;
+    }
+
     /**
      * Вставить данные в анкеты
      * @param string $data :textarea
@@ -72,13 +84,76 @@ class gosmonitor_scenario extends scenario {
      * @param  $debug :checkbox[1] отладка
      */
     function do_updatedata ($data,$testonly=true,$debug=true){
-        echo 'hello! ';//print_r([$testonly,$debug,$data]);
         $csv=csv::csvStr($data,['delim'=>"\t"]);
+        $names='';
         $cnt=0;
-        while($row=$csv->nextRow()){
-            $cnt++;//print_r($row);
+        $headers = [];
+        // если row[2] не похож на url - считаем первые 2 строки заголовком
+        if($row=$csv->nextRow()) {
+            if(!filter_var($row[2], FILTER_VALIDATE_URL)){
+                // заголовок
+                $headers[]=$row;
+                $headers[]=$csv->nextRow();
+                $row=$csv->nextRow();
+            }
+            do {
+                if(filter_var($row[2], FILTER_VALIDATE_URL)){
+                    // попытка найти организацию по url
+                    if(!($x=\gdata::findOrgByUrl($row[2]))){
+                        if($x['title']!=$row[1]){
+                            printf('Названия организаций не совпадают `%s` - `$s`'."\n",$x['title']!=$row[1]);
+                        }
+                        printf("Организация `%s` (%s) не найдена\n",$row[1],$row[2]);
+                        continue;
+                    }
+                    printf("Организация `%s` (%s)-%s\n",$row[1],$row[2],$x['nid']);
+                    // попытка найти свежую анкету
+                    if($a=\gdata::findAnkete($x['nid'])) {
+                        printf("Найдена %s (%s)\n", $a['title'], $a['nid']);
+                        if(empty($names))$names=\gdata::getCodeNames($a['method']);
+                    } else {
+                        printf("Анкета не найдена\n");
+                        continue;
+                    }
+                    //заполняем данные
+                    $lastheader='';
+                    for($i=3;$i<count($row);$i++){
+                       $param=$this->find($names,$headers[0][$i],$lastheader,$headers[1][$i]);
+                       if(empty($param)){
+                           printf("Не найдена позиция %s (%s)\n", $lastheader,$headers[1][$i]);
+                           //break;
+                       } else {
+                           \gdata::write_values($a,$param,$row[$i]);
+                       }
+                    }
+
+
+                } else {
+                    continue;
+                }
+                //echo $row[2];
+                $cnt++;//print_r($row);
+            } while ($row = $csv->nextRow());
         }
+
         echo $cnt;
+        print_r($names);
     }
 
+
+    /**
+     * Тестировать ноду с индексом ID
+     * @param $id нода
+     */
+    function do_test($id){
+        print_r(\gdata::getnode($id));
+    }
+
+    /**
+     * Данные анкеты индексом ID
+     * @param $id анкета
+     */
+    function do_ankete($id){
+        print_r(\gdata::getankete($id));
+    }
 }
