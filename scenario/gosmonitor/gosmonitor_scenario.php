@@ -68,7 +68,7 @@ class gosmonitor_scenario extends scenario {
     function find($names,$tit,&$lasttit,$second){
         if(!empty($tit)) $lasttit=$tit;
         foreach($names as $n){
-            if(preg_match('/^\s*'.($n['delta']+1),'\./is',$lasttit)
+            if(preg_match('/^\s*'.($n['delta']+1).'\./is',$lasttit)
             && preg_match('/'.preg_replace(['/\s+/','/\./'],['\\s+','.+?'],preg_quote(trim($n['name']),'/')).'/isu',$second)
             ){
                 return $n;
