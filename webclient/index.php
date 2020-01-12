@@ -52,7 +52,23 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     /**
      * начало выполнения
      */
-    $_SESSION['form'] = $_POST;
+    $_SESSION['form'] = [];
+    foreach($_POST as $k=>$v){
+        if(is_string($v) && strlen($v)>100000){
+            continue;
+        }
+        if(is_array($v)){
+            foreach($v as $kk=>$vv){
+                if(is_string($vv) && strlen($vv)>100000){
+                    continue;
+                }
+                $_SESSION['form'][$k][$kk]=$vv;
+            }
+            continue;
+        }
+        $_SESSION['form'][$k]=$v;
+    }
+    //$_POST;
     ob_start();
     $headers = UTILS::getallheaders();
     $response = array();
