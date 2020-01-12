@@ -68,7 +68,7 @@ class gosmonitor_scenario extends scenario {
     function find($names,$tit,&$lasttit,$second){
         if(!empty($tit)) $lasttit=$tit;
         foreach($names as $n){
-            if(preg_match('/'.preg_quote($n['delta']+1,'\.\s/').'/isu',$lasttit)
+            if(preg_match('/^\s*'.($n['delta']+1),'\./is',$lasttit)
             && preg_match('/'.preg_replace(['/\s+/','/\./'],['\\s+','.+?'],preg_quote(trim($n['name']),'/')).'/isu',$second)
             ){
                 return $n;
@@ -101,7 +101,7 @@ class gosmonitor_scenario extends scenario {
                     // попытка найти организацию по url
                     if(!($x=\gdata::findOrgByUrl($row[2]))){
                         if($x['title']!=$row[1]){
-                            printf('Названия организаций не совпадают `%s` - `$s`'."\n",$x['title']!=$row[1]);
+                            printf('Названия организаций не совпадают `%s` - `%s`'."\n",$x['title'],$row[1]);
                         }
                         printf("Организация `%s` (%s) не найдена\n",$row[1],$row[2]);
                         continue;
@@ -123,7 +123,7 @@ class gosmonitor_scenario extends scenario {
                            printf("Не найдена позиция %s (%s)\n", $lastheader,$headers[1][$i]);
                            //break;
                        } else {
-                           \gdata::write_values($a,$param,$row[$i]);
+                           \gdata::write_values($a,$param,$row[$i],$testonly);
                        }
                     }
 
@@ -137,7 +137,7 @@ class gosmonitor_scenario extends scenario {
         }
 
         echo $cnt;
-        print_r($names);
+       // print_r($names);
     }
 
 

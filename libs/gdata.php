@@ -26,7 +26,7 @@ class gdata {
 
     static function ra(){}
 
-    static function write_values($ankete,$param,$value){
+    static function write_values($ankete,$param,$val,$debug=true){
         self::_init();
         $db=ENGINE::db();
         // прочитать параметр
@@ -36,6 +36,9 @@ where
  fi.field_rating_value_ind_target_id=? and 
 fd.field_rating_value_form_data_target_id=?',$param['ind_id'],$ankete['nid']);
         if(!empty($value)) {
+            if(!empty($val) && preg_match('/(да)|нет/iu',$val,$m)){
+                $val=empty($m[1])?0:1;
+            }
             // изменить
             $k = ['entity_type' => 'node',
                 'bundle' => 'mob_expert_rating_values',
@@ -45,10 +48,12 @@ fd.field_rating_value_form_data_target_id=?',$param['ind_id'],$ankete['nid']);
                 'language' => 'und',
                 'delta' => 0,
                 'field_rating_value_cur_values_first' => $param['cr_id'],
-                'field_rating_value_cur_values_second' => $value];
-            $db->insert("insert into `field_data_field_rating_value_cur_values` (?1[?1k]) values (?1[?2]) on duplicate key update  ?1[?1k=VALUES(?1k)]",$k);
+                'field_rating_value_cur_values_second' => $val];
+            if(!$debug)
+             $db->insert("insert into `field_data_field_rating_value_cur_values` (?1[?1k]) values (?1[?2]) on duplicate key update  ?1[?1k=VALUES(?1k)]",$k);
+            printf(($debug?'будет ':'')."Изменен параметр p:%s, a:%s, ind:%s, cr:%s, v:%s\n",$value['nid'],$ankete['nid'],$param['ind_id'],$param['cr_id'],$val);
         } else {
-            printf("Не найден в базе параметр %s, %s\n",$ankete['nid'],$param['ind_id']);
+            printf("Не найден в базе параметр a:%s, cr:%s\n",$ankete['nid'],$param['ind_id']);
         }
     }
 
