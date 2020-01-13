@@ -66,14 +66,47 @@ class gosmonitor_scenario extends scenario {
     }
 
     function find($names,$tit,&$lasttit,$second){
+        static $ind_names=[],$_names=[];
         if(!empty($tit)) $lasttit=$tit;
+
+        if(!isset($ind_names[$lasttit])){
+            foreach($names as $n){
+                if(preg_match('/'.preg_replace(['/\s+/'],['\\s+'],preg_quote($n['ind_name'],'/')).'/is',$lasttit)
+                ){
+                    $ind_names[$lasttit]=$n['ind_id'];
+                    break;
+                }
+            }
+
+        }
+        if(!isset($ind_names[$lasttit])){
+            foreach($names as $n){
+                if(preg_match('/^\s*'.($n['delta']+1).'\./is',$lasttit)
+                ){
+                    $ind_names[$lasttit]=$n['ind_id'];
+                    break;
+                }
+            }
+
+        }
+        if(!isset($_names[$second])) {
+            foreach($names as $n){
+                if(preg_match('/'.preg_replace(['/\s+/','/\./'],['\\s+','.+?'],preg_quote(trim($n['name']),'/')).'/isu',$second)
+                ){
+                    $_names[$second]=$n['cr_id'];
+                }
+            }
+        }
+        if(!isset($_names[$second]) || !isset($ind_names[$lasttit])) {
+            return false;
+        }
+
         foreach($names as $n){
-            if(preg_match('/^\s*'.($n['delta']+1).'\./is',$lasttit)
-            && preg_match('/'.preg_replace(['/\s+/','/\./'],['\\s+','.+?'],preg_quote(trim($n['name']),'/')).'/isu',$second)
-            ){
+            if($_names[$second]==$n['cr_id'] && $ind_names[$lasttit]==$n['ind_id']) {
                 return $n;
             }
         }
+
         return false;
     }
 
@@ -83,7 +116,7 @@ class gosmonitor_scenario extends scenario {
      * @param  $testonly :checkbox[1] не менять данные
      * @param  $debug :checkbox[1] отладка
      */
-    function do_updatedata ($data,$testonly=true,$debug=true){
+    function do_updatedata ($data,$testonly=true,$debug=false){
         $csv=csv::csvStr($data,['delim'=>"\t"]);
         $names='';
         $cnt=0;
@@ -137,7 +170,8 @@ class gosmonitor_scenario extends scenario {
         }
 
         echo $cnt;
-       // print_r($names);
+        if($debug)
+            print_r($names);
     }
 
 

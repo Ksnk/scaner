@@ -27,6 +27,7 @@ class gdata {
     static function ra(){}
 
     static function write_values($ankete,$param,$val,$debug=true){
+        static $delta;
         self::_init();
         $db=ENGINE::db();
         // прочитать параметр
@@ -36,22 +37,74 @@ where
  fi.field_rating_value_ind_target_id=? and 
 fd.field_rating_value_form_data_target_id=?',$param['ind_id'],$ankete['nid']);
         if(!empty($value)) {
+            $key=$value['nid'];
+            if(!isset($delta[$key]))$delta[$key]=0;
+            else $delta[$key]++;
             if(!empty($val) && preg_match('/(да)|нет/iu',$val,$m)){
                 $val=empty($m[1])?0:1;
             }
-            // изменить
-            $k = ['entity_type' => 'node',
-                'bundle' => 'mob_expert_rating_values',
-                'deleted' => 0,
-                'entity_id' => $value['nid'],
-                'revision_id' => $value['vid'],
-                'language' => 'und',
-                'delta' => 0,
-                'field_rating_value_cur_values_first' => $param['cr_id'],
-                'field_rating_value_cur_values_second' => $val];
-            if(!$debug)
-             $db->insert("insert into `field_data_field_rating_value_cur_values` (?1[?1k]) values (?1[?2]) on duplicate key update  ?1[?1k=VALUES(?1k)]",$k);
-            printf(($debug?'будет ':'')."Изменен параметр p:%s, a:%s, ind:%s, cr:%s, v:%s\n",$value['nid'],$ankete['nid'],$param['ind_id'],$param['cr_id'],$val);
+            if(!$debug) {
+                // изменить данные
+                $k = [
+                    'entity_type' => 'node',
+                    'bundle' => 'mob_expert_rating_values',
+                    'deleted' => 0,
+                    'entity_id' => $value['nid'],
+                    'revision_id' => $value['vid'],
+                    'language' => 'und',
+                    'delta' => 0,
+                    'field_rating_value_created_value' => date("Y-m-d 00:00:00")
+                ];
+                $db->insert("insert into `field_data_field_rating_value_created` (?1[?1k]) value (?1[?2]) on duplicate key update  ?1[?1k=VALUES(?1k)]", $k);
+                $k = [
+                    'entity_type' => 'node',
+                    'bundle' => 'mob_expert_rating_values',
+                    'deleted' => 0,
+                    'entity_id' => $value['nid'],
+                    'revision_id' => $value['vid'],
+                    'language' => 'und',
+                    'delta' => 0,
+                    'field_rating_value_corrected_value' => date("Y-m-d 00:00:00")
+                ];
+                $db->insert("insert into `field_data_field_rating_value_corrected` (?1[?1k]) value (?1[?2]) on duplicate key update  ?1[?1k=VALUES(?1k)]", $k);
+
+                $db->update('update workflow_node set sid=28 where nid=?', $value['nid']);// 28
+
+                $k = ['entity_type' => 'node',
+                    'bundle' => 'mob_expert_rating_values',
+                    'deleted' => 0,
+                    'entity_id' => $value['nid'],
+                    'revision_id' => $value['vid'],
+                    'language' => 'und',
+                    'delta' => $delta[$key],
+                    'field_rating_value_init_values_first' => $param['cr_id'],
+                    'field_rating_value_init_values_second' => $val];
+                $db->insert("insert into `field_data_field_rating_value_init_values` (?1[?1k]) value (?1[?2]) on duplicate key update  ?1[?1k=VALUES(?1k)]", $k);
+                $k = ['entity_type' => 'node',
+                    'bundle' => 'mob_expert_rating_values',
+                    'deleted' => 0,
+                    'entity_id' => $value['nid'],
+                    'revision_id' => $value['vid'],
+                    'language' => 'und',
+                    'delta' => $delta[$key],
+                    'field_rating_value_edit_values_first' => $param['cr_id'],
+                    'field_rating_value_edit_values_second' => $val];
+                $db->insert("insert into `field_data_field_rating_value_edit_values` (?1[?1k]) value (?1[?2]) on duplicate key update  ?1[?1k=VALUES(?1k)]", $k);
+
+                // изменить
+                $k = ['entity_type' => 'node',
+                    'bundle' => 'mob_expert_rating_values',
+                    'deleted' => 0,
+                    'entity_id' => $value['nid'],
+                    'revision_id' => $value['vid'],
+                    'language' => 'und',
+                    'delta' => $delta[$key],
+                    'field_rating_value_cur_values_first' => $param['cr_id'],
+                    'field_rating_value_cur_values_second' => $val];
+
+                $db->insert("insert into `field_data_field_rating_value_cur_values` (?1[?1k]) value (?1[?2]) on duplicate key update  ?1[?1k=VALUES(?1k)]", $k);
+            }
+            printf(($debug?'Будет и':'И')."зменен параметр p:%s, a:%s, ind:%s, cr:%s, v:%s\n",$value['nid'],$ankete['nid'],$param['ind_id'],$param['cr_id'],$val);
         } else {
             printf("Не найден в базе параметр a:%s, cr:%s\n",$ankete['nid'],$param['ind_id']);
         }
@@ -91,7 +144,9 @@ and p.tid=?
  taxonomy_ind_cr.name as cr,
  cur_values.field_rating_value_cur_values_first as cr_id,
  -- cur_values.field_rating_value_cur_values_first AS cr_id, 
- cur_values.field_rating_value_cur_values_second AS cr_value
+ cur_values.field_rating_value_cur_values_second AS cr_value,
+ workflow_states.state as wstate,
+ workflow_node.sid as wstate_id
     FROM node form_data
     INNER JOIN field_data_field_rating_value_form_data form_data_rel ON form_data.nid = form_data_rel.field_rating_value_form_data_target_id
     INNER JOIN node values_node ON form_data_rel.entity_id = values_node.nid
@@ -99,6 +154,9 @@ and p.tid=?
     INNER JOIN taxonomy_term_data taxonomy_ind_name ON indicator.field_rating_value_ind_target_id = taxonomy_ind_name.tid
     LEFT JOIN field_data_field_rating_value_cur_values cur_values ON values_node.nid = cur_values.entity_id AND (cur_values.entity_type = 'node' AND cur_values.deleted = 0)
     INNER JOIN taxonomy_term_data taxonomy_ind_cr ON cur_values.field_rating_value_cur_values_first = taxonomy_ind_cr.tid
+LEFT JOIN workflow_node workflow_node ON values_node.nid = workflow_node.nid
+LEFT JOIN workflow_states workflow_states ON workflow_node.sid = workflow_states.sid
+
     
     WHERE (( (form_data.nid =?d ) ) AND (( (form_data.type IN ('mob_expert_rating_form_data')) )))",$id);
         return $row;
