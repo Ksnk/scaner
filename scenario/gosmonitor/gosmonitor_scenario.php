@@ -156,4 +156,124 @@ class gosmonitor_scenario extends scenario {
     function do_ankete($id){
         print_r(\gdata::getankete($id));
     }
-}
+
+  /**
+   * ОБновить индикатор "наличие карты сайта"
+   * @param string $data :textarea
+   * @param  $testonly :checkbox[1] не менять данные
+   * @param  $debug :checkbox[1] отладка
+   */
+  function do_updateindicator ($data,$testonly=true,$debug=true)
+  {
+    static $maxdate;
+    \gdata::_init();
+    $db=\ENGINE::db();
+    $csv = csv::csvStr($data, ['delim' => "\t"]);
+    $cnt=0;
+    if($row=$csv->nextRow()) {
+      if(!filter_var($row[2], FILTER_VALIDATE_URL)){
+        // заголовок
+        $headers[]=$row;
+        $headers[]=$csv->nextRow();
+        $row=$csv->nextRow();
+      }
+      do {
+        if(filter_var($row[2], FILTER_VALIDATE_URL)){
+          // попытка найти организацию по url
+          if(!($x=\gdata::findOrgByUrl($row[2]))){
+            if($x['title']!=$row[1]){
+              printf('Названия организаций не совпадают `%s` - `%s`'."\n",$x['title'],$row[1]);
+            }
+            printf("Организация `%s` (%s) не найдена\n",$row[1],$row[2]);
+            continue;
+          }
+          //printf("Организация `%s` (%s)-%s\n",$row[1],$row[2],$x['nid']);
+          // считаем время
+          $val=$row[3];
+          if(!empty($val) && preg_match('/(да)|нет/iu',$val,$m)){
+            $val=empty($m[1])?0:1;
+          }
+          printf("ставим значение индикатора has_sitemap `%s` (%s | %s)-%s\n",$val,$row[2],$x['nid'],$row[1]);
+          if(!isset($maxdate)){
+            $maxdate=$db->selectCell('select `date` from `indicator` order by date desc limit 1');
+          }
+
+          $k=[
+            'rating_type'=>'tech',
+            'indicator_name'=>'sitemap',
+            'date'=>$maxdate,
+            'entity_id'=>$x['nid'],
+            'value'=>$val,
+            'points'=>$val,
+            'entity_type'=>'node'
+          ];
+          if(!$testonly) {
+            $db->insert("INSERT INTO `indicator` (?1[?1k]) VALUES (?1[?2]) ON DUPLICATE KEY UPDATE  ?1[?1k=VALUES(?1k)]", $k);
+          } else {
+            print_r($k);
+          }
+
+        } else {
+          continue;
+        }
+        //echo $row[2];
+        $cnt++;//print_r($row);
+      } while ($row = $csv->nextRow());
+    }
+
+    echo $cnt;
+    // print_r($names);
+  }
+
+  /**
+   * корректировка ретинга для отсутствующих сайтов техрейтинга
+   */
+  function do_hackindicator ()
+  {
+    static $maxdate;
+    \gdata::_init();
+    $db=\ENGINE::db();
+    $x=[201=>221,
+      224 => 207,
+      535917 => 245,// - minobrnauki.gov.ru
+      535916 => 245,// - edu.gov.ru
+      229 => 207, //  -.nalog.ru
+      197 => 239, // - rospotrebnadzor.ru
+      180 => 245,
+      185 => 245];
+    if(!isset($maxdate)){
+      $maxdate=$db->selectCell('select `date` from `indicator` order by date desc limit 1');
+    }
+    //Для всех реципиентов скопировать рейтинг с доноров
+    foreach($x as $k=>$v){
+      $db->insert("insert into rating(rating_type,`date`,entity_id,type,value,points,place,place_raw,entity_type,group_id,group_changed)
+SELECT rating_type,`date`,? as entity_id,type,value,points,place,place_raw,entity_type,group_id,group_changed
+FROM `rating`
+where true
+      and entity_id=?
+      and date=?
+on duplicate key update value=VALUES(value),points=VALUES(points),place=VALUES(place)-7,place_raw=VALUES(place_raw)-7",$k,$v,$maxdate);
+      $db->insert("insert into indicator (rating_type,indicator_name,`date`,entity_id,value,points,entity_type)
+SELECT rating_type,indicator_name,`date`,	? as entity_id,value,points,entity_type FROM `indicator`
+where true
+      and entity_id=?
+      -- entity_id=535916
+      -- and points=5
+      and rating_type='tech'
+      and date=?
+on duplicate key update value=VALUES(value),points=VALUES(points)",$k,$v,$maxdate);
+    }
+    $db->delete("delete from rating
+where entity_id=?
+      and date=?",173,$maxdate);
+    $db->delete("delete from  `indicator`
+where entity_id=?
+      and rating_type='tech'
+      and date=?
+",173,$maxdate);
+    echo 'done';
+
+  }
+
+
+  }
