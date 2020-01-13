@@ -46,6 +46,7 @@ class csv extends scaner
   static function csvStr($string, $param = [])
   {
     $class = new self();
+    if(!preg_match('/[\n\r]$/',$string))$string.="\n";
     $class->newbuf($string);
     if (!isset($param['encoding'])) {
       $param['encoding'] = mb_detect_encoding($string, 'utf-8', true)
@@ -183,9 +184,13 @@ class csv extends scaner
         }
       if ($this->encoding != 'utf-8') $col = iconv($this->encoding, 'utf-8//ignore', $col);
       $cols[] = $col;
-      $this->start = $m[4][1];
-      if ($m[3][1] >= 0) {
+      if(empty($m)){
         break;
+      } else {
+        $this->start = $m[4][1];
+        if ($m[3][1] >= 0) {
+          break;
+        }
       }
       $m = [];
     }
