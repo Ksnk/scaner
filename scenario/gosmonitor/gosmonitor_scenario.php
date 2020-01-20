@@ -7,6 +7,9 @@
 
 namespace Ksnk\scaner;
 
+require_once "gdata.php";
+require_once "config.php";
+
 /**
  * @property spider spider
  * @tags gosmonitor

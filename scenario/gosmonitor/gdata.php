@@ -3,28 +3,7 @@
  * Модуль данных для госмонитора
  */
 
-
-class gdata {
-    static function _init(){
-        static $done=false;
-        if($done) return;
-        ENGINE::set_option(array(
-            'database.options'=>'nocache',
-
-            'database.host'=>'localhost',
-            'database.user'=>'gosmonitor',
-            'database.password'=>'ppxwC3qHv',
-            'database.base'=>'gosmonitor',
-            'database.prefix'=>'',
-
-            'engine.aliaces' => array(
-                'Database' => 'xDatabaseLapsii'
-            ),
-        ));
-        $done=true;
-    }
-
-    static function ra(){}
+class gdata extends \drupal_base{
 
     static function write_values($ankete,$param,$val,$debug=true){
         static $delta;
@@ -160,48 +139,6 @@ LEFT JOIN workflow_states workflow_states ON workflow_node.sid = workflow_states
     
     WHERE (( (form_data.nid =?d ) ) AND (( (form_data.type IN ('mob_expert_rating_form_data')) )))",$id);
         return $row;
-    }
-
-    static function getnode($id){
-        self::_init();
-        $db=ENGINE::db();
-        $row=$db->selectRow('SELECT nid,vid,type,title,status,created,changed,comment FROM `node` where `nid`=?d',$id);
-        $instance=$db->selectByInd('field_name','SELECT field_name,data FROM `field_config_instance` WHERE `bundle` = ?',$row['type']);
-        foreach ($instance as &$i){
-            $x=unserialize($i['data']);
-            $i['data']=$x['label'];
-        }
-        unset($i);
-        $rows=[];
-        $cnt=10;
-        //ENGINE::db('debug once');
-        foreach($instance as $i){
-            $d=$db->selectRow('SELECT * FROM ?k where `entity_id`=? and bundle=? and revision_id=?d','field_data_'.$i['field_name'],$row['nid'],$row['type'],$row['vid']);
-            $value='-=EMPTY=-';
-            $key='';
-            if($d) {
-                //$rows[]=$d;
-                if(isset($d[$i['field_name'].'_value'])){
-                    $value=$d[$i['field_name'].'_value'];
-                    $key=$i['field_name'].'_value';
-                } else {
-                    foreach ($d as $k => $v) {
-                        if (preg_match('~^'.$i['field_name'].'~',$k)) {
-                            $value=$v;
-                            $key=$k;
-                            break;
-                        }
-                    }
-                }
-                if(!empty($d['entity_type']) && $d['entity_type']=='taxonomy_term'){
-                    $value=$db->selectCell('select name from taxonomy_term_data where tid=?d',$value);
-                }
-            }
-            if(!empty($key))$key=' | '.$key;
-            $rows[$i['data']]=$value.$key;
-        }
-
-        return [$row,$rows];
     }
 
     static function findAnkete($nid){
