@@ -52,7 +52,7 @@ class Autoload
             if (!is_array($aliaces)) $aliaces = array($aliaces);
             foreach ($aliaces as $k=>$v)
                 $loader->aliaces[$k] = $v;
-           // $loader->aliaces = $loader->aliaces;
+            $loader->aliaces = array_unique($loader->aliaces);
         }
     }
 
@@ -80,8 +80,8 @@ class Autoload
         return false;
     }
 }
-if(file_exists(__DIR__.'/vendor/autoload.php'))
-    include_once __DIR__.'/vendor/autoload.php';
+if(file_exists($x=__DIR__.'/vendor/autoload.php'))
+    include_once $x;
 
 Autoload::register(['~/core', '~/libs'],
     [

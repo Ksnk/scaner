@@ -228,13 +228,14 @@ class x_parser {
     }
 
     private static function reflect($class){
+      //ReflectionClass::newInstanceWithoutConstructor
         return new \ReflectionClass($class);
     }
 
     static function getParameters($method,$class_name,$include=''){
         if(!empty($include)) include_once($include);
         $class = self::reflect($class_name);
-        $action = new $class_name();
+        $action = $class->newInstanceWithoutConstructor();// new $class_name();
         $result=array();
         $doccomment=$class->getDocComment();
         if(preg_match('/@tags\s+(.*?)\s+$/m',$doccomment,$m)) {

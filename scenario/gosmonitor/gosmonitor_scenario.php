@@ -7,16 +7,18 @@
 
 namespace Ksnk\scaner;
 
-require_once "gdata.php";
-require_once "config.php";
-
 /**
  * @property spider spider
  * @tags gosmonitor
  */
 class gosmonitor_scenario extends scenario {
 
-    /**
+  function __construct($joblist = null){
+    require_once "gdata.php";
+    require_once "config.php";
+    parent::__construct($joblist = null);
+  }
+  /**
      * Описание структуры данных исходной таблицы Excel (csv - \t )
      * @return object
      */
@@ -67,7 +69,19 @@ class gosmonitor_scenario extends scenario {
             'colcnt' => 0,
         ];
     }
-
+/*
+ function find($names,$tit,&$lasttit,$second){
+        if(!empty($tit)) $lasttit=$tit;
+        foreach($names as $n){
+            if(preg_match('/^\s*'.($n['delta']+1).'\./is',$lasttit)
+            && preg_match('/'.preg_replace(['/\s+/','/\./'],['\\s+','.+?'],preg_quote(trim($n['name']),'/')).'/isu',$second)
+            ){
+                return $n;
+            }
+        }
+        return false;
+    }
+ */
     function find($names,$tit,&$lasttit,$second){
         static $ind_names=[],$_names=[];
         if(!empty($tit)) $lasttit=$tit;
@@ -119,7 +133,7 @@ class gosmonitor_scenario extends scenario {
      * @param  $testonly :checkbox[1] не менять данные
      * @param  $debug :checkbox[1] отладка
      */
-    function do_updatedata ($data,$testonly=true,$debug=false){
+    function do_updatedata ($data,$testonly=true,$debug=true){
         $csv=csv::csvStr($data,['delim'=>"\t"]);
         $names='';
         $cnt=0;
@@ -191,7 +205,20 @@ class gosmonitor_scenario extends scenario {
      * @param $id анкета
      */
     function do_ankete($id){
-        print_r(\gdata::getankete($id));
+      $ankete=
+        \gdata::getankete($id);
+      foreach($ankete as $a){
+        printf("%s(%s)-%s(%s)=%s | %s(%s)\n",$a['parameter'],$a['parameter_id'],$a['cr'],$a['cr_id'],$a['cr_value'],$a['wstate'],$a['wstate_id']);
+        /*
+          [parameter] => Возможность для бесплатного консультирования и информирования по нормативам и требованиям к проводимым проверкам
+            [parameter_id] => 3222
+            [cr] => HTML доступность
+            [cr_id] => 24
+            [cr_value] => 0
+            [wstate] => утверждено
+            [wstate_id] => 25
+         */
+      }
     }
 
   /**
@@ -264,10 +291,13 @@ class gosmonitor_scenario extends scenario {
 
   /**
    * корректировка ретинга для отсутствующих сайтов техрейтинга
+   * @param $change :radio[0:не менять|1:менять]
    */
-  function do_hackindicator ()
+  function do_hackindicator ($change=0)
   {
     static $maxdate;
+    var_export($change);
+
     \gdata::_init();
     $db=\ENGINE::db();
     $x=[201=>221,
@@ -281,25 +311,59 @@ class gosmonitor_scenario extends scenario {
     if(!isset($maxdate)){
       $maxdate=$db->selectCell('select `date` from `indicator` order by date desc limit 1');
     }
-    //Для всех реципиентов скопировать рейтинг с доноров
-    foreach($x as $k=>$v){
-      $db->insert("insert into rating(rating_type,`date`,entity_id,type,value,points,place,place_raw,entity_type,group_id,group_changed)
-SELECT rating_type,`date`,? as entity_id,type,value,points,place,place_raw,entity_type,group_id,group_changed
-FROM `rating`
-where true
-      and entity_id=?
-      and date=?
-on duplicate key update value=VALUES(value),points=VALUES(points),place=VALUES(place)-7,place_raw=VALUES(place_raw)-7",$k,$v,$maxdate);
-      $db->insert("insert into indicator (rating_type,indicator_name,`date`,entity_id,value,points,entity_type)
-SELECT rating_type,indicator_name,`date`,	? as entity_id,value,points,entity_type FROM `indicator`
-where true
-      and entity_id=?
-      -- entity_id=535916
-      -- and points=5
-      and rating_type='tech'
-      and date=?
-on duplicate key update value=VALUES(value),points=VALUES(points)",$k,$v,$maxdate);
+    foreach(['federal','municipal','regional'] as $gov) {
+      $list = $db->selectCol("SELECT n.nid
+        FROM node n
+      LEFT JOIN field_data_field_mob_government_level gov ON n.nid = gov.entity_id AND (gov.entity_type = 'node' AND gov.deleted = 0)
+      LEFT JOIN field_data_field_mob_register reg ON  n.nid = reg .entity_id AND (reg.entity_type = 'node' AND reg .deleted = 0)
+      WHERE  TRUE
+        -- and n.nid = 225
+        AND gov.field_mob_government_level_value=? AND reg.field_mob_register_value='minec'", $gov);
+      foreach(['widget','tech','expert'] as $type) {
+        $rating = $db->selectCol("SELECT  DISTINCT(entity_id)  FROM rating 
+WHERE TRUE
+AND NOT points=0
+AND rating_type=?
+AND entity_id IN (?[?2])
+AND  date=?
+", $type, $list, $maxdate);
+        $ids=array_diff($list, $rating);
+        printf("%s : %s\n%s\n",$gov,$type,print_r(array_diff($list, $rating),true));
+        foreach($ids as $k) {
+            if(isset($x[$k])) $v=$x[$k];
+            else {
+              $xx=array_rand($rating);
+              $v =$rating[$xx];
+              $x[$k]=$v;
+            }
+            if($change>0) {
+              $db->insert("INSERT INTO rating(rating_type,`date`,entity_id,type,value,points,place,place_raw,entity_type,group_id,group_changed)
+  SELECT rating_type,`date`,? AS entity_id,type,value,points,place,place_raw,entity_type,group_id,group_changed
+  FROM `rating`
+  WHERE TRUE
+        AND entity_id=?
+        AND rating_type=?
+        AND date=?
+  ON DUPLICATE KEY UPDATE value=VALUES(value),points=VALUES(points),place=VALUES(place)-7,place_raw=VALUES(place_raw)-7", $k, $v, $type, $maxdate);
+              $db->insert("INSERT INTO indicator (rating_type,indicator_name,`date`,entity_id,value,points,entity_type)
+  SELECT rating_type,indicator_name,`date`,	? AS entity_id,value,points,entity_type FROM `indicator`
+  WHERE TRUE
+        AND entity_id=?
+        AND rating_type=?
+        AND date=?
+  ON DUPLICATE KEY UPDATE value=VALUES(value),points=VALUES(points)", $k, $v, $type, $maxdate);
+            } else {
+              //printf("изменения не производились");
+            }
+        }
+      }
     }
+    if($change>0)
+      printf("изменения не производились");
+    var_export($x);
+/*    return ;
+    //Для всех реципиентов скопировать рейтинг с доноров
+
     $db->delete("delete from rating
 where entity_id=?
       and date=?",173,$maxdate);
@@ -307,7 +371,7 @@ where entity_id=?
 where entity_id=?
       and rating_type='tech'
       and date=?
-",173,$maxdate);
+  ",173,$maxdate);*/
     echo 'done';
 
   }
