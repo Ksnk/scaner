@@ -1,6 +1,6 @@
 <?php
 /**
- * Сборка проекта в PHAH
+ * Сборка проекта в PHAR
  */
 
 include_once "autoload.php";
@@ -16,9 +16,9 @@ $phar->setSignatureAlgorithm(Phar::SHA1);
 
 $phar->startBuffering();
 $files = array();
-foreach (array('core/*.php'
-         , 'scenario/dishonestsupplier/*.php'
-         , 'scenario/testsftp/*.php'
+foreach (array('core/*.php','libs/*.php','template/*.php'
+         //, 'scenario/dishonestsupplier/*.php'
+         //, 'scenario/testsftp/*.php'
              //'scenario/sqlfiddle/*.php'
          ) as $dir) {
     $mask = UTILS::masktoreg($dir);

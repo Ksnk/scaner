@@ -70,18 +70,16 @@ class csv extends scaner
     $class->prepare();
     $buf = $class->getbuf();
     if ($encoding = mb_detect_encoding($buf, 'utf-8', true)) {
-      $encoding = 'utf-8';
-    } else {
-      $encoding = 'cp1251';
+        $class->param(['encoding' => $encoding]);
     }
     // первые 2-3 символа - не БОМ?
     if (preg_match('~^(' . self::BOM . '|' . self::LE16 . ')~', $buf, $m)) {
       if ($m[0] == self::BOM) {
-        $encoding = 'utf-8';
+        $class->param(['encoding' => 'utf-8']);
         $class->hasbom = 3;
         $class->position(3);
       } else {
-        $encoding = 'utf-16RLE';
+        $encoding = 'utf-16RLE';//todo сделать ?
         $class->hasbom = 2;
         $class->position(2);
       }

@@ -36,7 +36,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 ENGINE::start_session();
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     /**
-     * запрос на выполнение очередного цикла выполнения
+     * запрос на довыполнение очередного цикла выполнения
      */
     if (UTILS::val($_GET, 'target') == 'iframe') { //?callback=log&target=iframe)
         ob_start();

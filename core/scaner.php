@@ -1,6 +1,7 @@
 <?php
 
 namespace Ksnk\scaner;
+
 /**
  * простой сканер разнобольших текстовых файлов, можно в гнузипе
  * Используется как родитель для транспортных классов - spider/mailer
@@ -14,7 +15,7 @@ namespace Ksnk\scaner;
  */
 class scaner
 {
-
+    use traitHandledClass;
     /**
      * Читаем и дочитываем из файла вот такими кусками
      */

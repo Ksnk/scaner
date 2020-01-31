@@ -69,7 +69,7 @@ class joblist extends base
     }
 
     private static function storeAction($action){
-        if(empty($action && is_readable(self::ACTION_FILE))){
+        if(empty($action) && is_readable(self::ACTION_FILE)){
             unlink(self::ACTION_FILE);
             return ;
         }
