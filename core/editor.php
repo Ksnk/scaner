@@ -26,9 +26,9 @@ class editor
         $this->trace[] = [$pos, $len, $newval];
     }
 
-    function update()
+    function update($copytosrc=false)
     {
-        $src = fopen($this->filename, 'r');
+        $src = fopen($this->filename, 'r+');
         $dst = fopen($this->filename . '(1)', 'w+');
         $start = 0;
         foreach ($this->trace as $t) {
@@ -38,12 +38,18 @@ class editor
             fwrite($dst, $t[2]);
         }
         stream_copy_to_stream($src, $dst);
-
-        /*      rewind ($dst);rewind ($src);
-              $x=stream_copy_to_stream($dst,$src,$start);
-              echo $x; */
+/*              rewind ($dst);rewind ($src);
+              $x=stream_copy_to_stream($dst,$src);
+              echo $x;*/
         fclose($src);
         fclose($dst);
+        if($copytosrc) {
+            $src = fopen($this->filename, 'w+');
+            $dst = fopen($this->filename . '(1)', 'r+');
+            stream_copy_to_stream($dst, $src);
+            fclose($src);
+            fclose($dst);
+        }
     }
 
 }

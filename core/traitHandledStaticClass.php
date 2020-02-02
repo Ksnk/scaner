@@ -27,6 +27,17 @@ trait traitHandledStaticClass
         self::$_h_out=$callback;
     }
 
+    private static function _buildMess($args){
+        if (count($args) <1) {
+            return '';
+        } if (count($args) > 1) {
+            $format=array_shift($args);
+            return vsprintf($format, $args);
+        } else {
+            return $args[0];
+        }
+    }
+
     /**
      * выбросить ашипку
      * @param $message
@@ -35,11 +46,7 @@ trait traitHandledStaticClass
      */
     protected static function error($message)
     {
-        $args = func_get_args();
-        if (count($args) > 1) {
-            array_shift($args);
-            $message = vsprintf($message, $args);
-        }
+        $message=self::_buildMess(func_get_args());
         if(is_callable(self::$_h_error)){
             call_user_func(self::$_h_error,$message);
         } else
@@ -53,11 +60,7 @@ trait traitHandledStaticClass
      */
     protected static function out($message)
     {
-        $args = func_get_args();
-        if (count($args) > 1) {
-            array_shift($args);
-            $message = vsprintf($message, $args);
-        }
+        $message=self::_buildMess(func_get_args());
         if(is_callable(self::$_h_out)){
             call_user_func(self::$_h_out,$message);
         } else

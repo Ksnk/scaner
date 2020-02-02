@@ -27,6 +27,17 @@ trait traitHandledClass
         return $this;
     }
 
+    private function _buildMess($args){
+        if (count($args) <1) {
+            return '';
+        } if (count($args) > 1) {
+            $format=array_shift($args);
+            return vsprintf($format, $args);
+        } else {
+            return $args[0];
+        }
+    }
+
     /**
      * выбросить ашипку
      * @param $message
@@ -35,11 +46,7 @@ trait traitHandledClass
      */
     protected function error($message)
     {
-        $args = func_get_args();
-        if (count($args) > 1) {
-            array_shift($args);
-            $message = vsprintf($message, $args);
-        }
+        $message=$this->_buildMess(func_get_args());
         if(is_callable($this->_h_error)){
             $c=$this->_h_error;
             $c($message);
@@ -54,11 +61,7 @@ trait traitHandledClass
      */
     protected function out($message)
     {
-        $args = func_get_args();
-        if (count($args) > 1) {
-            array_shift($args);
-            $message = vsprintf($message, $args);
-        }
+        $message=$this->_buildMess(func_get_args());
         if(is_callable($this->_h_out)){
             $c=$this->_h_out;
             $c($message);
