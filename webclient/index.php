@@ -230,17 +230,17 @@ $data = array();
         if (!preg_match('/^do_(.*)$/', $method))
             continue;
 
-        $res = '';
+        $r = '';
         foreach ($val['param'] as $name => $par) {
             $par['class'][] = "form-control";
             $par['parname'] = $name;
 
-            $res .= x_parser::createInput($par, \UTILS::val($_SESSION, 'form', []));
+            $r .= x_parser::createInput($par, \UTILS::val($_SESSION, 'form', []));
         }
         $data[] = array(
             'title' => $val['title'],
             'method' => htmlspecialchars($classname . '::' . $method),
-            'res' => trim($res),
+            'res' => trim($r),
             'sc' => htmlspecialchars($sc),
             'anchor' => urlencode($val['title']),
         );

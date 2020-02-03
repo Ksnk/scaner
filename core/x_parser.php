@@ -243,6 +243,12 @@ class x_parser {
         } else {
             $result['tags'] = array('unknown');
         }
+        $result['comment']='';
+        if(preg_match('/^([^@]*)/s',$doccomment,$m)) {
+            $_comment=trim(preg_replace(['~^\s*/\*\*~m','~^\s*\*~m','~^\s*\*\s*@.*$~m'],['','',''],$m[1]));
+            if(!empty($_comment))
+                $result['comment']=$_comment;
+        }
         //$result['_doc_comment']=$class->getDocComment();
         if(empty($method)) $methods=$class->getMethods(  );
         else $methods=array($class->getMethod( $method ));
