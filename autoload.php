@@ -32,6 +32,12 @@ class Autoload
         } else {
             self::$index = dirname(__FILE__);
         }
+        // коррекция index в случае старта в phar
+        if(0===strpos(self::$index,'phar://')){
+            // находимся внутри PHAR файла, берем его dirname
+            self::$index=dirname(str_replace('phar://','',self::$index));
+        }
+        echo '$$$'.self::$index.'$$$';
         if (empty($loader)) {
             $loader = new self();
             if (PHP_VERSION < 50300) {
@@ -68,7 +74,7 @@ class Autoload
                 }
             }
             $filename = $d . '/' . str_replace('\\', '/', $classname) . '.php';
-            //echo('>>>'.$classname . ' --- ' . $filename . "\n");
+            echo('>>>'.$classname . ' --- ' . $filename . "\n");
             if (!file_exists($filename)) {
                 continue;
             }
@@ -76,7 +82,7 @@ class Autoload
             require_once($filename);
             return true;
         }
-       // echo('>>'.$classname . ' ' . getcwd() . ' ' . json_encode($this->dir) . "\n");
+        //echo('>>'.$classname . ' ' . getcwd() . ' ' . json_encode($this->dir) . "\n");
         return false;
     }
 }

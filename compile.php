@@ -5,18 +5,19 @@
 
 include_once "autoload.php";
 
-$file = "scaner.phar";
+$file = "build/scaner.phar";
 
 if (file_exists($file)) {
     unlink($file);
 }
 
-$phar = new Phar($file, 0, $file);
+$phar = new Phar($file, 0, 'scaner.phar');
 $phar->setSignatureAlgorithm(Phar::SHA1);
 
 $phar->startBuffering();
 $files = array();
 foreach (array('core/*.php','libs/*.php','template/*.php'
+         ,'webclient/index.php','webclient/webclient.css'
          //, 'scenario/dishonestsupplier/*.php'
          //, 'scenario/testsftp/*.php'
              //'scenario/sqlfiddle/*.php'
@@ -43,7 +44,7 @@ foreach ($files as $f => $path) {
 $binary = file(__DIR__ . '/cli.php');
 //unset($binary[1]);
 unset($binary[0]);
-
+/*
 $phar->setStub("#!/usr/bin/env php\n<?php Phar::mapPhar('" . $file . "');
 " .
     str_replace(
@@ -52,6 +53,9 @@ $phar->setStub("#!/usr/bin/env php\n<?php Phar::mapPhar('" . $file . "');
         implode('', $binary)
     ) . "
 __HALT_COMPILER();");
+*/
+$phar->setStub("<?php 
+__HALT_COMPILER();?>");
 
 $phar->stopBuffering();
 //$phar->compress(Phar::GZ);
