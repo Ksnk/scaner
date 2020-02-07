@@ -16,7 +16,9 @@ $phar->setSignatureAlgorithm(Phar::SHA1);
 
 $phar->startBuffering();
 $files = array();
-foreach (array('core/*.php','libs/*.php','template/*.php'
+foreach (array('core/*.php'
+         ,'libs/*.php','libs/template/*.*','libs/osr/*.*'
+         ,'template/*.php'
          ,'webclient/index.php','webclient/webclient.css'
          //, 'scenario/dishonestsupplier/*.php'
          //, 'scenario/testsftp/*.php'
@@ -56,9 +58,8 @@ __HALT_COMPILER();");
 */
 $phar->setStub("<?php 
 __HALT_COMPILER();?>");
-
 $phar->stopBuffering();
-//$phar->compress(Phar::GZ);
+$phar->compressFiles(Phar::GZ);
 unset($phar);
 
 //chmod($file, 0755);

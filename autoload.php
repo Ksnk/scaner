@@ -26,7 +26,7 @@ class Autoload
      */
     static function register($dir,$aliaces=[])
     {
-        static $loader;
+        static $loader, $phar_index='';
         if (defined('INDEX_DIR')) {
             self::$index = INDEX_DIR;
         } else {
@@ -35,9 +35,10 @@ class Autoload
         // коррекция index в случае старта в phar
         if(0===strpos(self::$index,'phar://')){
             // находимся внутри PHAR файла, берем его dirname
+            $phar_index=self::$index;
             self::$index=dirname(str_replace('phar://','',self::$index));
         }
-        echo '$$$'.self::$index.'$$$';
+        //echo '$$$'.self::$index.'$$$';
         if (empty($loader)) {
             $loader = new self();
             if (PHP_VERSION < 50300) {
@@ -51,6 +52,7 @@ class Autoload
             foreach ($dir as $dd)
                 foreach (explode(';', $dd) as $d) {
                     $loader->dir[] = str_replace('~', self::$index, $d);
+                    $loader->dir[] = str_replace('~', 'phar://scaner.phar', $d);
                 }
             $loader->dir = array_unique($loader->dir);
         }
@@ -74,7 +76,7 @@ class Autoload
                 }
             }
             $filename = $d . '/' . str_replace('\\', '/', $classname) . '.php';
-            echo('>>>'.$classname . ' --- ' . $filename . "\n");
+            //echo('>>>'.$classname . ' --- ' . $filename . "\n");
             if (!file_exists($filename)) {
                 continue;
             }
