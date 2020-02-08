@@ -221,9 +221,19 @@ class gosmonitor_scenario extends scenario {
       }
     }
 
+    /**
+     * отменить поля в анкетах по списку
+     * @param string $data :textarea - сsv [{url, диапазоны через запятую},...]
+     * @param  $testonly :checkbox[1] не менять данные
+     * @param  $debug :checkbox[1] отладка
+     */
+    function do_denyankettefields($data,$testonly,$debug){
+
+    }
+
   /**
-   * ОБновить индикатор "наличие карты сайта"
-   * @param string $data :textarea
+   * Обновить индикатор "наличие карты сайта"
+   * @param string $data :textarea - сsv [{№, название, url, значение},...]
    * @param  $testonly :checkbox[1] не менять данные
    * @param  $debug :checkbox[1] отладка
    */
@@ -258,9 +268,7 @@ class gosmonitor_scenario extends scenario {
             $val=empty($m[1])?0:1;
           }
           printf("ставим значение индикатора has_sitemap `%s` (%s | %s)-%s\n",$val,$row[2],$x['nid'],$row[1]);
-          if(!isset($maxdate)){
-            $maxdate=$db->selectCell('select `date` from `indicator` order by date desc limit 1');
-          }
+          $maxdate=\gdata::maxdate();
 
           $k=[
             'rating_type'=>'tech',
@@ -290,7 +298,7 @@ class gosmonitor_scenario extends scenario {
   }
 
   /**
-   * корректировка ретинга для отсутствующих сайтов техрейтинга
+   * корректировка рейтинга для отсутствующих сайтов техрейтинга
    * @param $change :radio[0:не менять|1:менять]
    */
   function do_hackindicator ($change=0)
@@ -361,20 +369,8 @@ AND  date=?
     if($change>0)
       printf("изменения не производились");
     var_export($x);
-/*    return ;
-    //Для всех реципиентов скопировать рейтинг с доноров
-
-    $db->delete("delete from rating
-where entity_id=?
-      and date=?",173,$maxdate);
-    $db->delete("delete from  `indicator`
-where entity_id=?
-      and rating_type='tech'
-      and date=?
-  ",173,$maxdate);*/
     echo 'done';
 
   }
 
-
-  }
+}

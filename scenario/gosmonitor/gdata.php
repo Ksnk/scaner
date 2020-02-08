@@ -5,6 +5,16 @@
 
 class gdata extends \drupal_base{
 
+    static function maxdate(){
+        static $maxdate;
+        self::_init();
+        $db=ENGINE::db();
+        if(!isset($maxdate)){
+            $maxdate=$db->selectCell('select `date` from `indicator` order by date desc limit 1');
+        }
+        return $maxdate;
+    }
+
     static function write_values($ankete,$param,$val,$debug=true){
         static $delta;
         self::_init();

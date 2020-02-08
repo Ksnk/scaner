@@ -13,7 +13,8 @@ class Autoload
         /** @var array прямое перенаправление классов Имя класса->его представитель  */
         $map = array(),
         /** @var string root-dir для autoload  */
-        $index = '';
+        $index = '',
+        $phar='';
 
     static function map($array)
     {
@@ -35,7 +36,7 @@ class Autoload
         // коррекция index в случае старта в phar
         if(0===strpos(self::$index,'phar://')){
             // находимся внутри PHAR файла, берем его dirname
-            $phar_index=self::$index;
+            self::$phar=self::$index;
             self::$index=dirname(str_replace('phar://','',self::$index));
         }
         //echo '$$$'.self::$index.'$$$';
@@ -52,7 +53,9 @@ class Autoload
             foreach ($dir as $dd)
                 foreach (explode(';', $dd) as $d) {
                     $loader->dir[] = str_replace('~', self::$index, $d);
-                    $loader->dir[] = str_replace('~', 'phar://scaner.phar', $d);
+                    if(!empty(self::$phar)) {
+                        $loader->dir[] = str_replace('~', self::$phar, $d);
+                    }
                 }
             $loader->dir = array_unique($loader->dir);
         }
