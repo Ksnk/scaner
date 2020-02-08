@@ -51,9 +51,11 @@ class monitoring_scenario extends scenario
         return $data;
     }
 
-    const reghtml =
-        //'d:/projects/monitoring/monitoring.corpmsp.ru/webapps/StartPage/orgreg.html';
-        '../data/monitoriing/orgreg.html';
+  const reghtml =
+    'd:/projects/monitoring/monitoring.corpmsp.ru/webapps/StartPage/orgreg.html';
+  const tmphtml =
+    'd:/projects/monitoring/monitoring.corpmsp.ru/webapps/StartPage/orgreg.XXX.html';
+  //   '../data/monitoriing/orgreg.html';
     //   data/monitoriing/orgreg_tpp.html'
 
     /**
@@ -231,12 +233,13 @@ class monitoring_scenario extends scenario
         }
     }
 
-    /**
-     *  перенумеровать все номера
-     * @param string $date :date Дата весения правок
-     * @param bool $createcsv :radio[0:Не надо|1:Создать] Сделать CSV
-     */
-    function do_renumber($date = '', $createcsv = false)
+  /**
+   *  перенумеровать все номера
+   * @param string $date :date Дата весения правок
+   * @param bool $createcsv :radio[0:Не надо|1:Создать] Сделать CSV
+   * @param bool $update :radio[0:Не надо|1:изменить] внести изменения
+   */
+    function do_renumber($date = '', $createcsv = false, $update=false)
     {
         if (empty($date)) $date = time();
         else $date = strtotime($date);
@@ -286,7 +289,7 @@ class monitoring_scenario extends scenario
                 $editor->longedit($scaner->getpos() - mb_strlen($res['tail'], '8bit') - mb_strlen($res['date'], '8bit'), mb_strlen($res['date'], '8bit'), $v[1]);
         }
         $scaner->close();
-        $editor->update();
+        $editor->update($update,self::tmphtml);
         if ($createcsv) {
             $this->_importdata($date);
         }
@@ -441,6 +444,7 @@ class monitoring_scenario extends scenario
             }
             $k++;
         }
+        echo "\ndone\n";
         //var_export($scaner);
         //$this->joblist->append_scenario('scan_book_pages',array("http://www.rfbr.ru/rffi/ru/books/"));
     }
@@ -613,19 +617,20 @@ class monitoring_scenario extends scenario
             $editor->longedit($x->textstart,$x->textfin-$x->textstart+1, rtrim($html));
             echo "\n----\n";
         }
-        $editor->update($debug);
+        $editor->update($debug,self::tmphtml);
 
         echo count($rows);
     }
 
-    /**
-     * Тестировать c&p из Excel
-     * @param $code - если указан - изменение, если не указан - добавление нового
-     * @param $date
-     * @param $a :textarea
-     * @param $b :textarea
-     */
-    function do_test_excel_input($code = '', $date = '', $a = '', $b = '')
+  /**
+   * Тестировать c&p из Excel
+   * @param string $code - если указан - изменение, если не указан - добавление нового
+   * @param string $date
+   * @param string $a :textarea
+   * @param string $b :textarea
+   * @param $debug :radio[0:не менять данные|1:менять]
+   */
+    function do_test_excel_input($code = '', $date = '', $a = '', $b = '',$debug=false)
     {
         if (empty($code)) {
             // читаем последнюю запись в файле
@@ -639,6 +644,7 @@ class monitoring_scenario extends scenario
             end($res['doscan']);
             $r = current($res['doscan']);
             $result = $this->get_ByCode($r['num']);
+            $result->textstart=$result->textfin;
         } else {
             $result = $this->get_ByCode($code);
         }
@@ -657,16 +663,21 @@ class monitoring_scenario extends scenario
             $inn = $_('_|0|6');
             if (9 == strlen($inn)) $inn = '0' . $inn;
             $regcode = substr($inn, 0, 2);
+          $result->values['_'][0][0] = $_('_|0|0') ;
+          $result->values['_'][0][2] = $_('_|0|2');
+          $result->values['_'][0][3] = date('d.m.Y', $date);
+
         } else {
 // создание нового
-            $inn = \UTILS::val($r, 2);
-            if (9 == strlen($inn)) $inn = '0' . $inn;
-            $regcode = substr($inn, 0, 2);
-
-            $result->values['_'][0][0] = $_('_|0|0') + 1;
+          $inn = \UTILS::val($r, 2);
+          if (9 == strlen($inn)) $inn = '0' . $inn;
+          $regcode = substr($inn, 0, 2);
+          $result->values['_'][0][0] = $_('_|0|0') + 1;
+          $result->values['_'][0][2] = date('d.m.Y', $date);
+          $result->values['_'][0][3] = '';
+        }
             $result->values['_'][0][1] = '1' . $regcode . str_pad(substr($_('_|0|1'), 3) + 1, 4, "0", STR_PAD_LEFT);
-            $result->values['_'][0][2] = date('d.m.Y', $date);
-            $result->values['_'][0][3] = '';
+
             $result->values['_'][0][4] = \UTILS::val($r, 0);
             $result->values['_'][0][5] = \UTILS::val($r, 1);
             $result->values['_'][0][6] = $inn;
@@ -705,13 +716,13 @@ class monitoring_scenario extends scenario
                     21 => \UTILS::val($r, 12),
                 ];
             }
-        }
+
         // вариант создания нового документа
         // выводим HTML рыбу
         $rows = max(3, 3 * count($result->values['sub']));
         $rowsx3 = max(1, count($result->values['sub']));
         // первая строка
-        echo '<tr class=\'row_org row_reg_' . $regcode . '\'>
+        $html= '<tr class=\'row_org row_reg_' . $regcode . '\'>
 <td rowspan=\'' . $rows . '\'><div>' . $_('_|0|0') . '</div></td>
 <td rowspan=\'' . $rows . '\'><div>' . $_('_|0|1') . '</div></td>
 <td rowspan=\'' . $rows . '\'><div>' . $_('_|0|2') . '</div></td>
@@ -745,10 +756,10 @@ class monitoring_scenario extends scenario
 </tr>
 ';
         for ($i = 1; $i < $rows; $i++) {
-            echo '<tr class=\'row_org row_reg_' . $regcode . '\'>';
+          $html.=  '<tr class=\'row_org row_reg_' . $regcode . '\'>';
             if ($i % 3 == 0) {
                 $x = round($i / 3);
-                echo '
+              $html.=  '
 <td rowspan=\'3\'><div>' . $_('sub|' . $x . '|9') . '</div></td>
 <td rowspan=\'3\'><div>' . $_('sub|' . $x . '|10') . '</div></td>
 <td rowspan=\'3\'><div>' . $_('sub|' . $x . '|11') . '</div></td>
@@ -766,14 +777,56 @@ class monitoring_scenario extends scenario
                 $txt = $x == 1
                     ? 'государственная (муниципальная) программа (подпрограмма), иная программа развития МСП, предусматривающая создание организации инфраструктуры полностью или частично за счет средств федерального бюджета, бюджетов субъектов Российской Федерации и (или) местных бюджетов'
                     : 'закон, иной нормативный правовой акт, устанавливающий требования к организации инфраструктуры либо предусматривающий право организации выполнять функции организаций инфраструктуры';
-                echo '
+              $html.=  '
 <td rowspan=\'' . $rowsx3 . '\'><div class=\'cell-small\'>' . $txt . '</div></td>
 <td rowspan=\'' . $rowsx3 . '\'><div class=\'cell-small\'>' . $_('low|' . $x . '|26') . '</div></td>
 <td rowspan=\'' . $rowsx3 . '\'><div class=\'cell-small\'>' . $_('low|' . $x . '|27') . '</div></td>';
             }
-            echo '</tr>
+          $html.=  '</tr>
 ';
         }
-        echo json_encode($b, JSON_UNESCAPED_UNICODE);
+      $editor = new editor(self::reghtml);
+      $editor->longedit($result->textstart,$result->textfin-$result->textstart+1, rtrim($html));
+      echo "\n----\n";
+      $editor->update($debug,self::tmphtml);
+        //echo json_encode($b, JSON_UNESCAPED_UNICODE);
     }
+
+  /**
+   * Исключить организацию
+   * @param string $code - код организации
+   * @param string $date
+   * @param $debug :radio[0:не менять данные|1:менять]
+   */
+  function do_deleteorg($code = '', $date = '', $debug=false)
+  {
+
+    $result = $this->get_ByCode($code);
+    $_ = function ($where) use ($result) {
+      return \UTILS::val($result->values, $where);
+    };
+    if (empty($date))
+      $date = time();
+    else
+      $date = strtotime($date);
+    $inn = $_('_|0|6');
+    if (9 == strlen($inn)) $inn = '0' . $inn;
+    $regcode = substr($inn, 0, 2);
+    $rows = 3;
+    $html = '<tr class=\'row_org row_reg_' . $regcode . '\'>
+<td rowspan=\'' . $rows . '\'><div>' . $_('_|0|0') . '</div></td>
+<td rowspan=\'' . $rows . '\'><div>' . $_('_|0|1') . '</div></td>
+<td rowspan=\'' . $rows . '\'><div>' . $_('_|0|2') . '</div></td>
+<td rowspan=\'' . $rows . '\'><div>' . date('d.m.Y', $date) . '</div></td>
+<td rowspan=\'' . $rows . '\' colspan="26"><div>' . $_('_|0|4') . ' (Организация исключена)</div></td>
+</tr>
+<tr class=\'row_org row_reg_' . $regcode . '\'></tr>
+<tr class=\'row_org row_reg_' . $regcode . '\'></tr>
+';
+    $editor = new editor(self::reghtml);
+    $editor->longedit($result->textstart,$result->textfin-$result->textstart+1, rtrim($html));
+    echo "\n----\n";
+    $editor->update($debug,self::tmphtml);
+  }
+
 }
