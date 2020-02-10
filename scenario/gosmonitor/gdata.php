@@ -126,28 +126,42 @@ and p.tid=?
         return $row;
     }
 
+    static function deletenode($nid){
+      self::_init();
+      $db=ENGINE::db();
+      $row=$db->delete("delete from node where nid=?d",$nid);
+    }
+
     static function getankete($id){
         self::_init();
         $db=ENGINE::db();
-        $row=$db->select("SELECT taxonomy_ind_name.name as parameter,indicator.field_rating_value_ind_target_id as parameter_id,
+        $row=$db->select("SELECT policy_indicators.delta,taxonomy_ind_name.name as parameter,indicator.field_rating_value_ind_target_id as parameter_id,
  taxonomy_ind_cr.name as cr,
  cur_values.field_rating_value_cur_values_first as cr_id,
  -- cur_values.field_rating_value_cur_values_first AS cr_id, 
  cur_values.field_rating_value_cur_values_second AS cr_value,
  workflow_states.state as wstate,
- workflow_node.sid as wstate_id
+ workflow_node.sid as wstate_id, values_node.nid as value_nid
     FROM node form_data
-    INNER JOIN field_data_field_rating_value_form_data form_data_rel ON form_data.nid = form_data_rel.field_rating_value_form_data_target_id
-    INNER JOIN node values_node ON form_data_rel.entity_id = values_node.nid
+    left JOIN field_data_field_rating_value_form_data form_data_rel ON form_data.nid = form_data_rel.field_rating_value_form_data_target_id
+    left JOIN node values_node ON form_data_rel.entity_id = values_node.nid
     LEFT JOIN field_data_field_rating_value_ind indicator ON values_node.nid = indicator.entity_id AND (indicator.entity_type = 'node' AND indicator.deleted = 0)
-    INNER JOIN taxonomy_term_data taxonomy_ind_name ON indicator.field_rating_value_ind_target_id = taxonomy_ind_name.tid
+    left JOIN taxonomy_term_data taxonomy_ind_name ON indicator.field_rating_value_ind_target_id = taxonomy_ind_name.tid
     LEFT JOIN field_data_field_rating_value_cur_values cur_values ON values_node.nid = cur_values.entity_id AND (cur_values.entity_type = 'node' AND cur_values.deleted = 0)
-    INNER JOIN taxonomy_term_data taxonomy_ind_cr ON cur_values.field_rating_value_cur_values_first = taxonomy_ind_cr.tid
+    left JOIN taxonomy_term_data taxonomy_ind_cr ON cur_values.field_rating_value_cur_values_first = taxonomy_ind_cr.tid
+
+ LEFT JOIN field_data_field_expert_rating_form_policy form_policy ON form_data.nid = form_policy.entity_id AND (form_policy.entity_type = 'node' AND form_policy.deleted = '0')
+ INNER JOIN taxonomy_term_data taxonomy_term_data_field_data_field_expert_rating_form_policy ON form_policy.field_expert_rating_form_policy_target_id = taxonomy_term_data_field_data_field_expert_rating_form_policy.tid
+ LEFT JOIN field_data_field_policy_indicators policy_indicators ON taxonomy_term_data_field_data_field_expert_rating_form_policy.tid = policy_indicators.entity_id AND (policy_indicators.entity_type = 'taxonomy_term' AND policy_indicators.deleted = '0')
+ INNER JOIN field_collection_item fcollection ON policy_indicators.field_policy_indicators_value = fcollection.item_id
+ LEFT JOIN field_data_field_policy_indicators_ind policy_indicator ON fcollection.item_id = policy_indicator.entity_id AND (policy_indicator.entity_type = 'field_collection_item' AND policy_indicator.deleted = '0')
+
 LEFT JOIN workflow_node workflow_node ON values_node.nid = workflow_node.nid
 LEFT JOIN workflow_states workflow_states ON workflow_node.sid = workflow_states.sid
-
     
-    WHERE (( (form_data.nid =?d ) ) AND (( (form_data.type IN ('mob_expert_rating_form_data')) )))",$id);
+    WHERE  (form_data.nid =?d ) AND  (form_data.type IN ('mob_expert_rating_form_data'))
+ and indicator.field_rating_value_ind_target_id = policy_indicator.field_policy_indicators_ind_target_id
+order by policy_indicators.delta",$id);
         return $row;
     }
 

@@ -15,7 +15,17 @@ class gosmonitor_scenario extends scenario {
 
   function __construct($joblist = null){
     require_once "gdata.php";
-    require_once "config.php";
+    if(file_exists($f=__DIR__.'/../../../sites/default/settings.php')){
+      $databases=[]; //
+      include $f;
+      $db=$databases['default']['default'];
+      define('DB_HOST',$db['host']);
+      define('DB_NAME',$db['database']);
+      define('DB_USER',$db['username']);
+      define('DB_PASSWORD',$db['password']);
+    } else {
+      require_once "config.php";
+    }
     parent::__construct($joblist = null);
   }
   /**
@@ -69,19 +79,6 @@ class gosmonitor_scenario extends scenario {
             'colcnt' => 0,
         ];
     }
-/*
- function find($names,$tit,&$lasttit,$second){
-        if(!empty($tit)) $lasttit=$tit;
-        foreach($names as $n){
-            if(preg_match('/^\s*'.($n['delta']+1).'\./is',$lasttit)
-            && preg_match('/'.preg_replace(['/\s+/','/\./'],['\\s+','.+?'],preg_quote(trim($n['name']),'/')).'/isu',$second)
-            ){
-                return $n;
-            }
-        }
-        return false;
-    }
- */
     function find($names,$tit,&$lasttit,$second){
         static $ind_names=[],$_names=[];
         if(!empty($tit)) $lasttit=$tit;
@@ -205,10 +202,16 @@ class gosmonitor_scenario extends scenario {
      * @param $id анкета
      */
     function do_ankete($id){
+      \gdata::_init();
+      $db=\ENGINE::db();
       $ankete=
         \gdata::getankete($id);
+      $cnt=0;
       foreach($ankete as $a){
-        printf("%s(%s)-%s(%s)=%s | %s(%s)\n",$a['parameter'],$a['parameter_id'],$a['cr'],$a['cr_id'],$a['cr_value'],$a['wstate'],$a['wstate_id']);
+        $cnt++;
+        printf("%s)\t%s(%s)-%s(%s|%s)=%s | %s(%s)\n",$a['delta']+1,$a['parameter'],$a['parameter_id'],$a['cr'],$a['cr_id'],
+          $a['value_nid'],
+          $a['cr_value'],$a['wstate'],$a['wstate_id']);
         /*
           [parameter] => Возможность для бесплатного консультирования и информирования по нормативам и требованиям к проводимым проверкам
             [parameter_id] => 3222
@@ -219,16 +222,102 @@ class gosmonitor_scenario extends scenario {
             [wstate_id] => 25
          */
       }
+      printf("Всего: %s\n",$cnt);
     }
 
     /**
      * отменить поля в анкетах по списку
-     * @param string $data :textarea - сsv [{url, диапазоны через запятую},...]
-     * @param  $testonly :checkbox[1] не менять данные
-     * @param  $debug :checkbox[1] отладка
+     * @param string $data :textarea - сsv [{название,url, диапазоны через запятую},...]
+     * @param  $change :radio[0:не менять данные|1:менять]
+     * @param  $debug :radio[0:без отладки|1:отладка]
      */
-    function do_denyankettefields($data,$testonly,$debug){
+    function do_denyankettefields($data,$change,$debug)
+    {
+      \gdata::_init();
+     // session_write_close();
+     // $_SESSION=[];
+     // \gdata::startdrupal();
+      $csv = csv::csvStr($data, ['delim' => "\t"]);
+      $urlrow=null;
+      if ($row = $csv->nextRow()) {
+        if(is_null($urlrow)){
+          for($i=0;$i<count($row);$i++){
+            if(filter_var($row[$i], FILTER_VALIDATE_URL)) {
+              $urlrow = $i;
+              break;
+            }
+          }
+        }
+        if (is_null($urlrow)) {
+          // заголовок
+          $headers[] = $row;
+          $headers[] = $csv->nextRow();
+          $row = $csv->nextRow();
+          for($i=0;$i<count($row);$i++){
+            if(filter_var($row[$i], FILTER_VALIDATE_URL)) {
+              $urlrow = $i;
+              break;
+            }
+          }
+        }
+        if (is_null($urlrow)) {
+          echo "Проверьте данные.";
+          return;
+        }
 
+        do {
+          if (filter_var($row[$urlrow], FILTER_VALIDATE_URL)) {
+            // попытка найти организацию по url
+            if (!($x = \gdata::findOrgByUrl($row[$urlrow]))) {
+              if ($x['title'] != $row[$urlrow-1]) {
+                printf('Названия организаций не совпадают `%s` - `%s`' . "\n", $x['title'], $row[1]);
+              }
+              printf("Организация `%s` (%s) не найдена\n", $row[$urlrow-1], $row[1]);
+              continue;
+            }
+            printf("Организация `%s` (%s) найдена\n", $row[$urlrow-1], $x['nid']);
+            if($a=\gdata::findAnkete($x['nid'])) {
+              printf("Найдена %s (%s)\n", $a['title'], $a['nid']);
+              if(empty($names))$names=\gdata::getCodeNames($a['method']);
+            } else {
+              printf("Анкета не найдена\n");
+              continue;
+            }
+            // анализ диапазонов
+            $punks=[];
+            $list=preg_split('~,|\n~',$row[$urlrow+1]);
+            foreach($list as $l){
+              if(preg_match('/^\s*(\d+)\s*$/',$l,$m)){
+                $punks[]=(int)$m[1];
+              } else if(preg_match('/^\s*(\d+)\s*\-\s*(\d+)\s*$/',$l,$m)){
+                if($m[1]>$m[2]){$x=$m[2];$m[2]=$m[1];$m[1]=$x;}
+                for($x=$m[1];$x<=$m[2];$x++)$punks[]=$x;
+              } else if(''!=trim($l)) {
+                printf("нипонил - `%s`\n", trim($l));
+              }
+            }
+            $fields=implode(',',$punks);
+            printf("поля анкеты: %s\n",$fields);
+            $ankete=\gdata::getankete($a['nid']);
+            foreach($punks as $f){
+              foreach($ankete as $al){
+                if($al['delta']+1 == $f){
+                  if($change){
+                    $x='Удалили';
+                    \gdata::deletenode($al['value_nid']);
+                  } else {
+                    $x='Планировали уладить';
+                  }
+                  printf("%s значение %s\n",$x,$al['value_nid']);
+                  break ;
+                }
+              }
+            }
+          }
+
+        } while($row = $csv->nextRow());
+      }
+      echo "done.";
     }
 
   /**
@@ -239,7 +328,6 @@ class gosmonitor_scenario extends scenario {
    */
   function do_updateindicator ($data,$testonly=true,$debug=true)
   {
-    static $maxdate;
     \gdata::_init();
     $db=\ENGINE::db();
     $csv = csv::csvStr($data, ['delim' => "\t"]);
@@ -295,6 +383,74 @@ class gosmonitor_scenario extends scenario {
 
     echo $cnt;
     // print_r($names);
+  }
+
+  /**
+   * перенос рейтинга с одной организации на другую
+   * @param $src - ID организации источника
+   * @param $dest - ID организации получателя
+   * @param $ratings - списокк рейтингов, через запятую
+   * @param $timestart - начиная с даты
+   * @param $timefin - заканчивая датой (пусто - до текущей)
+   * @param $change :radio[0:не менять|1:менять]
+   */
+  function do_transer_rating ($src,$dest,$ratings, $timestart,$timefin,$change)
+  {
+    \gdata::_init();
+    $db=\ENGINE::db();
+
+    if(!empty($t=strtotime($timestart))){
+      $timestart=$t;
+    }
+    if(!empty($timefin)){
+      if(!empty($t=strtotime($timefin))) $timefin=$t;
+    } else {
+      $timefin = \gdata::maxdate();
+    }
+    $db=\ENGINE::db();
+    // ищем рейтинг
+
+    // даты
+    $dates=$db->selectCol('select distinct date from indicator where date>=? and date <=?',$timestart, $timefin);
+    // читаем
+    $sql='select entity_id, date, value, points, rating_type, indicator_name from indicator
+where date in (?[?2]) and entity_id=?';
+    if(!empty($ratings)){
+      $sql.=$db->_([' and rating_type in (?[?2])',preg_split('/\s*[;,]\s*/',$ratings)]);
+    }
+    $data=$db->select($sql,$dates,$src);
+    foreach($data as $d){
+      if($change) {
+        $d['entity_id']=$dest;
+        $db->insert("INSERT INTO indicator (?1[?1k]) values(?1[?2])
+      ON DUPLICATE KEY UPDATE value=VALUES(value),points=VALUES(points)", $d);
+      }
+    }
+    // читаем рейтинг
+    $sql='select rating_type,`date`,entity_id,type,value,points,place,place_raw,entity_type,group_id,group_changed from rating
+where date in (?[?2]) and entity_id=?';
+    if(!empty($ratings)){
+      $sql.=$db->_([' and rating_type in (?[?2])',preg_split('/\s*[;,]\s*/',$ratings)]);
+    }
+    $data=$db->select($sql,$dates,$src);
+    foreach($data as $d){
+      if($change) {
+        $d['entity_id']=$dest;
+        $db->insert("INSERT INTO rating (?1[?1k]) values(?1[?2])
+      ON DUPLICATE KEY UPDATE value=VALUES(value),points=VALUES(points)", $d);
+      }
+    }
+    echo 'done.';
+
+
+    /*    $db->insert("INSERT INTO indicator (rating_type,indicator_name,`date`,entity_id,value,points,entity_type)
+      SELECT rating_type,indicator_name,`date`,	? AS entity_id,value,points,entity_type FROM `indicator`
+      WHERE TRUE
+            AND entity_id=?
+            AND rating_type=?
+            AND date=?
+      ON DUPLICATE KEY UPDATE value=VALUES(value),points=VALUES(points)", $k, $v, $type, $maxdate);
+      */
   }
 
   /**
