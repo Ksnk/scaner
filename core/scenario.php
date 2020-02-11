@@ -5,9 +5,9 @@ namespace Ksnk\scaner;
 class scenario extends base
 {
     /**
-     * @var joblist
      * @property scaner scaner
      * @property spider spider
+     * @var joblist
      */
     var $joblist;
 
@@ -15,6 +15,10 @@ class scenario extends base
     {
         parent::__construct();
         $this->joblist = $joblist;
+    }
+
+    function outstream($streamcns,$parameter=''){
+        $this->joblist->outstream($streamcns,$parameter);
     }
 
     /**

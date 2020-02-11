@@ -15,7 +15,7 @@ error_reporting(E_ALL);
 
 define('USE_NAMESPACE', 'Ksnk\\scaner\\');
 define('INDEX_DIR', dirname(__DIR__));
-define('TEMP_DIR', '../temp/');
+define('TEMP_DIR', '../tmp/');
 
 include_once "../autoload.php";
 
@@ -39,10 +39,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
      * запрос на довыполнение очередного цикла выполнения
      */
     if (UTILS::val($_GET, 'target') == 'iframe') { //?callback=log&target=iframe)
-        ob_start();
         $joblist->donext();
-        $result = trim(ob_get_contents());
-        ob_end_clean();
+        $result=$joblist->getResult();
         echo '<script type="text/javascript"> top.' . UTILS::val($_GET, 'callback', 'ajax_handle') . '(' . utf8_encode(json_encode(array(
                 'cnt' => $joblist->jobcount() > 0 ? sprintf('to be continued...(%s jobs in queue)', $joblist->jobcount()) : '',
                 'log' => $result
@@ -166,7 +164,7 @@ x_parser::$templates = array(
     'files' => '<div class="row file_upload dropzone">' .
         '<label for="{{UID}}" class="col-xs-' . ($lsize) . ' control-label">{{label}}</label>' .
         '<div class="col-xs-' . (12 - $lsize) . ' input-group">' .
-        '<select name="{{name}}[]" size=1 multiple="multiple" id="{{UID}}" class="form-control" {{attr}} >{{radio}}</select>' .
+        '<select style="height:10.4em;" name="{{name}}[]" size=1 multiple="multiple" id="{{UID}}" class="form-control" {{attr}} >{{radio}}</select>' .
         '<span class="input-group-btn">
 <span class="btn btn-default btn-file">
 + <input type="file" name="_{{name}}[]">
@@ -183,7 +181,7 @@ x_parser::$templates = array(
 
     'select' => '<div class="row"> <label for="{{UID}}" class="col-xs-' . ($lsize) . ' control-label">{{label}}</label><div class="col-xs-' . (12 - $lsize) . '"><select name="{{name}}" id="{{UID}}" class="form-control input-sm" {{attr}} >{{radio}}</select></div></div>',
 
-    'select_option' => '<option value="{{value}}" class="form-control"{{selected}}>{{label}}</option>',
+    'select_option' => '<option value="{{value}}" class="small form-control"{{selected}}>{{label}}</option>',
 
 // обрамление элементов формы
     '_' => '<a name="{{method}}"></a><div class="panel panel-primary" id="{{method}}" style="display:none;"><div class="panel-heading">
@@ -250,7 +248,10 @@ $data = array();
 
 ob_start();
 $joblist->donext();
-$result = trim(ob_get_contents());
+$result = $joblist->getResult();
+if ('' != ($_r = trim(ob_get_contents()))) {
+    $result[] = [$joblist::OUTSTREAM_PRE,'', $_r];
+}
 ob_end_clean();
 
 Autoload::register(['~/libs/template', '~/template']);

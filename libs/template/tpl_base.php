@@ -422,19 +422,31 @@ Pellentesque dictum scelerisque urna, sed porta odio venenatis ut. Integer aucto
 
     /**
      * фильтр slice - вывод значения по умолчанию, при пустом параметре
-     * @param $value
-     * @param $slices
-     * @param string $fill_with
+     * @param mixed $value
+     * @param int $start
+     * @param int $len
+     * @param mixed $fill_with
      * @return array
      */
-    function func_slice($value, $slices, $fill_with = '')
+    function func_slice($value, $start,$len=-1, $fill_with = '')
     {
-        if (!is_array($value)) return array();
-        $res = array();
-        for ($i = 0; $i < count($value); $i += $slices) {
-            $res[] = array_slice($value, $i, $slices);
+        if (!is_array($value)) {
+            $strlen=mb_strlen($value,'utf-8');
+            if($strlen<=$start) return '';
+            if($len<0) $len = $strlen-$start;
+            if($strlen<=$start+$len-1){
+                $len=$strlen-$start;
+            }
+            // string slice
+            return mb_substr($value,$start,$len,'utf-8');
+        };
+        $arrlen=count($value);
+        if($arrlen<=$start) return [];
+        if($len<0) $len = $arrlen-$start;
+        if($arrlen<=$start+$len-1){
+            $len=$arrlen-$start;
         }
-        return $res;
+        return array_slice($value,$start,$len);
     }
 
     /**

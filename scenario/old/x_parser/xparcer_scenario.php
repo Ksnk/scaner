@@ -9,7 +9,7 @@
 /**
  * Проверка возможностей x_parcer
  * Class sqlfiddle_scenario
- * @tags debug
+ * @tags ~debug
  */
 class xparcer_scenario extends scenario {
 

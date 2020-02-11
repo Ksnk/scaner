@@ -20,7 +20,7 @@ foreach (array('core/*.php'
          ,'libs/*.php','libs/template/*.*','libs/osr/*.*'
          ,'template/*.php'
          ,'webclient/index.php','webclient/webclient.css'
-         //, 'scenario/dishonestsupplier/*.php'
+         ,'scenario/x_parser/*.php'
          //, 'scenario/testsftp/*.php'
              //'scenario/sqlfiddle/*.php'
          ) as $dir) {

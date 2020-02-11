@@ -7,6 +7,10 @@ namespace Ksnk\scaner;
  */
 class base
 {
+    const
+        OUTSTREAM_PRE='text.pre',
+        OUTSTREAM_HTML='html',
+        OUTSTREAM_HTML_FRAME='html.frame';
 
     function __construct($opt = array())
     {
