@@ -14,6 +14,7 @@ namespace Ksnk\scaner;
 class gosmonitor_scenario extends scenario {
 
   function __construct($joblist = null){
+    require_once "mongo.php";
     require_once "gdata.php";
     if(file_exists($f=__DIR__.'/../../../sites/default/settings.php')){
       $databases=[]; //
@@ -79,58 +80,40 @@ class gosmonitor_scenario extends scenario {
             'colcnt' => 0,
         ];
     }
-    function find($names,$tit,&$lasttit,$second){
-        static $ind_names=[],$_names=[];
-        if(!empty($tit)) $lasttit=$tit;
+    function find($names,$first,$second,$debug=false){
+      if(preg_match('/^\d+/',$first,$m)) {
+        // поиск внутри names
+        $reg = '/'.preg_replace(['/\s+/','/\./'],['\\s+','.+?'], preg_quote($second,'/') ). '/usi';
 
-        if(!isset($ind_names[$lasttit])){
-            foreach($names as $n){
-                if(preg_match('/'.preg_replace(['/\s+/'],['\\s+'],preg_quote($n['ind_name'],'/')).'/is',$lasttit)
-                ){
-                    $ind_names[$lasttit]=$n['ind_id'];
-                    break;
-                }
-            }
-
-        }
-        if(!isset($ind_names[$lasttit])){
-            foreach($names as $n){
-                if(preg_match('/^\s*'.($n['delta']+1).'\./is',$lasttit)
-                ){
-                    $ind_names[$lasttit]=$n['ind_id'];
-                    break;
-                }
-            }
-
-        }
-        if(!isset($_names[$second])) {
-            foreach($names as $n){
-                if(preg_match('/'.preg_replace(['/\s+/','/\./'],['\\s+','.+?'],preg_quote(trim($n['name']),'/')).'/isu',$second)
-                ){
-                    $_names[$second]=$n['cr_id'];
-                }
-            }
-        }
-        if(!isset($_names[$second]) || !isset($ind_names[$lasttit])) {
-            return false;
-        }
-
-        foreach($names as $n){
-            if($_names[$second]==$n['cr_id'] && $ind_names[$lasttit]==$n['ind_id']) {
-                return $n;
-            }
-        }
-
-        return false;
+        foreach ($names as $n) {
+          if (($n['delta'] + 1) == $m[0] && preg_match($reg, $n['name'])) {
+            return $n;
+          }
+        };
+/*
+        printf("%s,%s\n%s\n", $first, $second,  print_r($ankete[0], true));
+        $reg = '/'.preg_replace(['/\s+/','/\./'],['\\s+','.+?'], preg_quote($second,'/') ). '/usi';
+        foreach ($ankete as $a) {
+          if (($a['delta'] + 1) == $m[0] && preg_match($reg, $a['cr'])) {
+            if($debug)
+              printf("%s,%s, %s\n%s\n", $first, $second, $reg, print_r($a, true));
+            return $a;
+          }
+        };
+*/
+      }
+      return false;
     }
 
     /**
      * Вставить данные в анкеты
-     * @param string $data :textarea
-     * @param  $testonly :checkbox[1] не менять данные
-     * @param  $debug :checkbox[1] отладка
+     * @param string $data :textarea данные
+     * @param  $change :radio[0:не менять данные|1:менять]
+     * @param  $debug :radio[0:только ошибки|1:все изменения] вывод
      */
-    function do_updatedata ($data,$testonly=true,$debug=true){
+    function do_updatedata ($data,$change=false,$debug=true){
+      static $names=[];
+
         $csv=csv::csvStr($data,['delim'=>"\t"]);
         $names='';
         $cnt=0;
@@ -155,37 +138,171 @@ class gosmonitor_scenario extends scenario {
                     }
                     printf("Организация `%s` (%s)-%s\n",$row[1],$row[2],$x['nid']);
                     // попытка найти свежую анкету
-                    if($a=\gdata::findAnkete($x['nid'])) {
+                    if(!!($a=\gdata::findAnkete($x['nid']))) {
+                        $a['site']=$x['nid'];
                         printf("Найдена %s (%s)\n", $a['title'], $a['nid']);
-                        if(empty($names))$names=\gdata::getCodeNames($a['method']);
+                        if(empty($names[$a['method']]))$names[$a['method']]=\gdata::getCodeNames($a['method']);
+
                     } else {
                         printf("Анкета не найдена\n");
                         continue;
                     }
+                    //$ankete=\gdata::getankete($a['nid']);
                     //заполняем данные
                     $lastheader='';
+                    $row2 = $csv->nextRow(); // вторая строка !
+
                     for($i=3;$i<count($row);$i++){
-                       $param=$this->find($names,$headers[0][$i],$lastheader,$headers[1][$i]);
-                       if(empty($param)){
-                           printf("Не найдена позиция %s (%s)\n", $lastheader,$headers[1][$i]);
-                           //break;
-                       } else {
-                           \gdata::write_values($a,$param,$row[$i],$testonly);
-                       }
+                      $check_naliche_nempty=false;
+                      if(''!=$headers[0][$i]){
+                        $lastheader=$headers[0][$i];
+                        // Тут проверяем, что первый параметр - наличие и он заполнен
+                        $check_naliche_nempty=true;
+                      }
+                       $param=$this->find($names[$a['method']],$lastheader,$headers[1][$i],$debug);
+                      /**
+                      $param >>> Array
+                      (
+                      [delta] => 0
+                      [rt_id] => 1
+                      [ind_id] => 2675
+                      [ind_name] => Полное наименование госоргана
+                      [ind_rel] => 3
+                      [cr_id] => 20
+                      [name] => наличие
+                      [cr_rel] => 1
+                      )
+                       */
+                      if(empty($param)) {
+                        printf("Не найдена позиция %s (%s)\n", $lastheader, $headers[1][$i]);
+                      } elseif($param['cr_rel']!=1){
+                          printf("Нерелевантные данные. `%s` для `%s`(%s)\n",$row[$i], $lastheader,$headers[1][$i]);
+                      } else {
+                           $val=$row[$i];
+                           $vals=\gdata::get('anketevalues');
+                           $val_descr=$vals[$param['cr_id']];
+                        if($check_naliche_nempty){
+                          // первый параметр - наличие
+                          if($param['name']!='наличие'){
+                            printf("Первый параметр группы не `наличие`. `%s` для `%s`(%s)\n",$val, $lastheader,$headers[1][$i]);
+                          } elseif(!preg_match($val_descr['reg'],$val)){
+                            printf("Параметр `наличие` не заполнен. `%s` для `%s`(%s)\n",$val, $lastheader,$headers[1][$i]);
+                          }
+                        }
+                           if(!preg_match($val_descr['reg'],$val)) {
+                             if(''!=trim($val))
+                               printf("Некорректные данные. `%s` для `%s`(%s)\n",$val, $lastheader,$headers[1][$i]);
+                             $val=$val_descr['min'];
+                           }
+                           \gdata::write_values($param, $a, $val,trim($row2[$i]), $change,$debug);
+                      }
+                      // if($i>8) break;
                     }
 
 
                 } else {
                     continue;
                 }
+                // пересчитываем КИД
+
+                $vals=\gdata::get('anketevalues');
+                $ankete=\gdata::getankete($a['nid']);
+
+                if(empty($names[$a['method']]))$names[$a['method']]=\gdata::getCodeNames($a['method']);
+
+                $rcnt=0;
+                $rel=0;
+                $lastind=0;
+                $calc=['relevancy_sum'=>0,'parameter_sum'=>0];
+                foreach ($ankete as $aline) {
+                  /**
+                   * aline:
+                    [delta] => 0
+                    [parameter] => Полное наименование госоргана
+                    [parameter_id] => 2675
+                    [cr] => наличие
+                    [cr_id] => 20
+                    [cr_value] => 1
+                    [wstate] => утвержден один параметр
+                    [wstate_id] => 28
+                    [value_nid] => 664982
+                   * param:
+                    [delta] => 0
+                    [rt_id] => 1
+                    [ind_id] => 2675
+                    [ind_name] => Полное наименование госоргана
+                    [ind_rel] => 3
+                    [cr_id] => 20
+                    [name] => наличие
+                    [cr_rel] => 1
+                   */
+
+                  if(!empty($aline['cr'])) {
+                    $param = $this->find($names[$a['method']]
+                      , ($aline['delta'] + 1) . '. ' . $aline['parameter'], $aline['cr']);
+                    if (empty($param)) {
+                      printf("КИД.Не найден параметр. `%s. %s`(%s) для %s\n"
+                        , $aline['delta'] + 1, $aline['parameter'], $aline['cr'], $a['nid']);
+                    } else if ($param['cr_rel'] != 1) {
+                      printf("КИД.Нерелевантный критерий заполнен. `%s. %s`(%s) для %s\n",$param['delta']+1,$param['ind_name'],$param['name'], $a['nid']);
+                    } else {
+                      if($lastind!=$param['ind_id']){
+                        // обсчитываем предыдущее значение
+                        if(isset($calc['relevancy'])) {
+                          if($calc['relevancy']<0)
+                            $calc['relevancy']=0-$calc['relevancy'];
+                          $calc['relevancy_sum'] += $calc['relevancy'];
+                          $calc['parameter_sum'] += ($calc['criterion_mult'] * $calc['relevancy']);
+                        }
+                        // начинаем новое
+                        $calc['relevancy']=$param['ind_rel'];
+                        $calc['criterion_mult']=1;
+                        $lastind=$param['ind_id'];
+                      }
+                      $rcnt++;
+                      $v = $vals[$aline['cr_id']];
+                      $vv=$v['kid'][$aline['cr_value']];
+                      if($calc['relevancy']<0)
+                        $vv=1-$vv;
+                      $rel += $v['kid'][$aline['cr_value']];
+                      $calc['criterion_mult']*=$vv;
+                    }
+                  } else {
+                    $rcnt++;
+                  }
+                  //if($rcnt>3) break;
+                }
+              // обсчитываем последнее значение
+                if($calc['relevancy']<0)
+                    $calc['relevancy']=0-$calc['relevancy'];
+                $calc['relevancy_sum'] += $calc['relevancy'];
+                $calc['parameter_sum'] += ($calc['criterion_mult'] * $calc['relevancy']);
+
+                $k = [
+                  'entity_type' => 'node',
+                  'bundle' => 'mob_expert_rating_form_data',
+                  'deleted' => 0,
+                  'entity_id' => $a['nid'],
+                  'revision_id' => $a['vid'],
+                  'language' => 'und',
+                  'delta' => 0,
+                  'field_expert_rating_form_kid_value' => ($calc['parameter_sum'] / $calc['relevancy_sum']) * 100.0
+                ];
+                if($change) {
+                  $db=\gdata::get('db');
+                  $db->insert("INSERT INTO `field_data_field_expert_rating_form_kid` (?1[?1k]) VALUE (?1[?2]) ON DUPLICATE KEY UPDATE  ?1[?1k=VALUES(?1k)]", $k);
+                }
+                printf("кид: %s\n",$k['field_expert_rating_form_kid_value']);
+              /*               $node = node_load($form_data_nid);
+                             $node->field_expert_rating_form_kid = array('und' => array(0 => array('value' => $value))); */
+
                 //echo $row[2];
                 $cnt++;//print_r($row);
+             // if($cnt>10) break;
             } while ($row = $csv->nextRow());
         }
 
-        echo $cnt;
-        if($debug)
-            print_r($names);
+        printf("Записан%s %s анкет%s\n",\gdata::plural($cnt,'а|ы|o'), $cnt,\gdata::plural($cnt,'а|ы'));
     }
 
 
@@ -193,7 +310,7 @@ class gosmonitor_scenario extends scenario {
      * Тестировать ноду с индексом ID
      * @param $id нода
      */
-    function do_test($id){
+    function do_readnode($id){
         print_r(\gdata::getnode($id));
     }
 
@@ -202,8 +319,7 @@ class gosmonitor_scenario extends scenario {
      * @param $id анкета
      */
     function do_ankete($id){
-      \gdata::_init();
-      $db=\ENGINE::db();
+      $db=\gdata::get('db');
       $ankete=
         \gdata::getankete($id);
       $cnt=0;
@@ -212,15 +328,6 @@ class gosmonitor_scenario extends scenario {
         printf("%s)\t%s(%s)-%s(%s|%s)=%s | %s(%s)\n",$a['delta']+1,$a['parameter'],$a['parameter_id'],$a['cr'],$a['cr_id'],
           $a['value_nid'],
           $a['cr_value'],$a['wstate'],$a['wstate_id']);
-        /*
-          [parameter] => Возможность для бесплатного консультирования и информирования по нормативам и требованиям к проводимым проверкам
-            [parameter_id] => 3222
-            [cr] => HTML доступность
-            [cr_id] => 24
-            [cr_value] => 0
-            [wstate] => утверждено
-            [wstate_id] => 25
-         */
       }
       printf("Всего: %s\n",$cnt);
     }
@@ -233,7 +340,7 @@ class gosmonitor_scenario extends scenario {
      */
     function do_denyankettefields($data,$change,$debug)
     {
-      \gdata::_init();
+     // \gdata::_init();
      // session_write_close();
      // $_SESSION=[];
      // \gdata::startdrupal();
@@ -328,8 +435,7 @@ class gosmonitor_scenario extends scenario {
    */
   function do_updateindicator ($data,$testonly=true,$debug=true)
   {
-    \gdata::_init();
-    $db=\ENGINE::db();
+    $db=\gdata::get('db');
     $csv = csv::csvStr($data, ['delim' => "\t"]);
     $cnt=0;
     if($row=$csv->nextRow()) {
@@ -356,7 +462,7 @@ class gosmonitor_scenario extends scenario {
             $val=empty($m[1])?0:1;
           }
           printf("ставим значение индикатора has_sitemap `%s` (%s | %s)-%s\n",$val,$row[2],$x['nid'],$row[1]);
-          $maxdate=\gdata::maxdate();
+          $maxdate=\gdata::get('maxdate');
 
           $k=[
             'rating_type'=>'tech',
@@ -396,8 +502,7 @@ class gosmonitor_scenario extends scenario {
    */
   function do_transer_rating ($src,$dest,$ratings, $timestart,$timefin,$change)
   {
-    \gdata::_init();
-    $db=\ENGINE::db();
+    $db=\gdata::get('db');
 
     if(!empty($t=strtotime($timestart))){
       $timestart=$t;
@@ -405,7 +510,7 @@ class gosmonitor_scenario extends scenario {
     if(!empty($timefin)){
       if(!empty($t=strtotime($timefin))) $timefin=$t;
     } else {
-      $timefin = \gdata::maxdate();
+      $timefin = \gdata::get('maxdate');
     }
     $db=\ENGINE::db();
     // ищем рейтинг
@@ -459,11 +564,9 @@ where date in (?[?2]) and entity_id=?';
    */
   function do_hackindicator ($change=0)
   {
-    static $maxdate;
     var_export($change);
 
-    \gdata::_init();
-    $db=\ENGINE::db();
+    $db=\gdata::get('db');
     $x=[201=>221,
       224 => 207,
       535917 => 245,// - minobrnauki.gov.ru
@@ -472,9 +575,8 @@ where date in (?[?2]) and entity_id=?';
       197 => 239, // - rospotrebnadzor.ru
       180 => 245,
       185 => 245];
-    if(!isset($maxdate)){
-      $maxdate=$db->selectCell('select `date` from `indicator` order by date desc limit 1');
-    }
+
+    $maxdate=\gdata::get('maxdate');
     foreach(['federal','municipal','regional'] as $gov) {
       $list = $db->selectCol("SELECT n.nid
         FROM node n
@@ -527,6 +629,118 @@ AND  date=?
     var_export($x);
     echo 'done';
 
+  }
+
+  /**
+   * тестировать
+   */
+  function do_test(){
+    print_r(\gdata::get('anketevalues'));
+  }
+
+  /**
+   * Обновить записи коллекции Hosts в монге
+   * @param int $change :radio[0:не менять|1:менять]
+   * @throws \Exception
+   */
+  function do_updateHosts ($change=0)
+  {
+    var_export($change);
+
+    $db=\gdata::get('db');
+
+    $mongo= \gdata::get('mongo');
+    $collectionHost=$mongo->selectCollection('Host');
+
+   // $host = $collectionHost->findOne(['gosmonitor_id' => intval(197)]);
+    // найдем все организации участвующие в рейтинге
+    $ids=$db->selectCol('select  distinct entity_id from field_data_field_mob_register where field_mob_register_value in (\'minec\',\'over\')  ');
+    $cnt=['total'=>0,'insert'=>0,'update'=>0];
+    //$org=\gdata::getnode(239733);
+    //print_r($org);
+    foreach($ids as $o_id){
+      $org=\gdata::getnode($o_id);
+      $host = $collectionHost->findOne(['gosmonitor_id' => intval($o_id)]);
+
+      $od_link=$db->selectRow('select field_mob_link_to_chapter_url as url from field_data_field_mob_link_to_chapter where entity_id=? and  revision_id=? and deleted=0', $org->nid,$org->vid);
+      $add_urls=$org->field_additional_urls;
+      $site = [
+        // 'curator' => $curators,
+        'name' => $org->title,
+        'site' => $org->field_mob_url,
+        'gosmonitor_id' => intval($o_id),
+        'add_url' => !empty($add_urls) ? $add_urls : null,
+        'short_name' => $org->field_mob_name_short,
+        'od_link' => empty($od_link['url'])?null:$od_link['url'],
+        'changed' => $org->changed,
+        'latest_record_update' => new \MongoDate(time())
+      ];
+      if(!isset($host['_id'])){
+        $host = $collectionHost->findOne(['site' => $site['site']]);
+      }
+      $hostId = null;
+      try {
+        if (!isset($host['_id'])) {
+          printf("Не найдена запись %s в монге", $o_id);
+          //watchdog('widget', 'site not found will be inserted: ' . var_export($site, true));
+          if ($change) {
+            $collectionHost->insert($site, ['fsync' => true]);
+          } else {
+            printf("будем вставлять в монгу %s\n", print_r($site, true));
+          }
+          $cnt['insert']++;
+          //break;
+        } else {
+          $hostId = new \MongoId($host['_id']->{'$id'});
+          // сравниваем ключевые поля
+          $update = [];
+          foreach (['name', 'gosmonitor_id', 'site', 'add_url', 'short_name', 'od_link'] as $x) {
+            if (!empty($site[$x]) && $host[$x] != $site[$x]) {
+              $update[$x] = $site[$x];
+            }
+          }
+          if (!empty($update)) {
+            if ($change) {
+              $collectionHost->update(['_id' => $hostId], ['$set' => $update], ['fsync' => true]);
+            } else {
+              printf("будем обновлять %s в монгу %s\n", $hostId, print_r($update, true));
+            }
+            $cnt['update']++;
+          }
+        }
+      } catch(\Exception $e){
+        printf("exception %s\nработали с %s %s %s", $e->getMessage(),
+          $hostId,$o_id, print_r($site, true));
+      }
+     // print_r($host);
+      $cnt['total']++;
+      //if($cnt> 10 ) break;
+    }
+    print_r( $cnt);
+    /*
+    if (!isset($host['_id'])) {
+      watchdog('widget', 'site not found by id, trying to find by URL: ' . $siteUrl);
+      $host = $collectionHost->findOne(['site' => $siteUrl]);
+      $mustUpdateId = true;
+    }
+    if (isset($host['_id'])) {
+      $hostId = new MongoId($host['_id']->{'$id'});
+      if ($mustUpdateId) {
+        $collectionHost->update(['_id' => $hostId], ['$set' => [
+          'gosmonitor_id' => intval($siteId),
+          'changed' => time(),
+          'latest_record_update' => new MongoDate(time())
+        ]], ['fsync' => true]);
+      }
+    } */
+  }
+
+  /**
+   * тестирование - Найти организацию
+   * @param $url
+   */
+  function do_finByOrg($url){
+    print_r(\gdata::findOrgByUrl($url));
   }
 
 }

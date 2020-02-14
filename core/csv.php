@@ -148,19 +148,22 @@ class csv extends scaner
         str_replace(',', $this->delim, '~((")(?:[^"]|"")*"|.*?)(,|(\r\n|\n|\r))()~s'));
       $this->_reg = str_replace('"', $this->quote,
         str_replace(',', $this->delim, '~(.*?)(,|(\r\n|\n|\r))()~s'));
-      if ($this->encoding == 'utf-8') $key = 'u';
+      if ($this->encoding == 'utf-8') {
+        $this->_reg0.= 'u';
+        $this->_reg.= 'u';
+      }
     }
     $this->prepare(false);
     if ($this->finish - $this->filestart - $this->start <= 0) return [];
     $cols = [];
     $m = [];
     while (true) {
-      if (preg_match($this->_reg0 . $key, $this->buf, $m, PREG_OFFSET_CAPTURE, $this->start)) {
+      if (preg_match($this->_reg0 , $this->buf, $m, PREG_OFFSET_CAPTURE, $this->start)) {
         $col = preg_replace(['/^' . $this->quote . '/', '/' . $this->quote . '$/', '/' . $this->quote . $this->quote . '/'], ['', '', $this->quote], $m[1][0]);
         array_shift($m);
       } else // иногда, из за большого объема данных в поле, регулярка не выедает все в первый раз
         if ($this->buf{$this->start} == $this->quote ||
-          preg_match($this->_reg . $key, $this->buf, $m, PREG_OFFSET_CAPTURE, $this->start)) {
+          preg_match($this->_reg , $this->buf, $m, PREG_OFFSET_CAPTURE, $this->start)) {
           if (empty($m)) {
             // попытка прочитать поврежденный текст
             $this->start++;

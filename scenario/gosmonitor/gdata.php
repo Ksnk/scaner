@@ -5,103 +5,170 @@
 
 class gdata extends \drupal_base{
 
-    static function maxdate(){
-        static $maxdate;
-        self::_init();
-        $db=ENGINE::db();
-        if(!isset($maxdate)){
-            $maxdate=$db->selectCell('select `date` from `indicator` order by date desc limit 1');
-        }
-        return $maxdate;
-    }
+  private static $cache=[];
 
-    static function write_values($ankete,$param,$val,$debug=true){
-        static $delta;
-        self::_init();
-        $db=ENGINE::db();
+  static function get($name){
+    if(!isset(self::$cache[$name])) {
+      if(method_exists(__CLASS__,($method='_'.$name))){
+        self::$cache[$name]=call_user_func(array(__CLASS__,$method));
+      }
+    }
+    return self::$cache[$name];
+  }
+
+  /**
+   * @return xDatabaseLapsi
+   */
+  private static function _db(){
+    self::_init();
+    return ENGINE::db();
+  }
+
+
+  private static function _mongo(){
+    return new \emongo();
+  }
+  /**
+   * @return array
+   */
+  private static function _anketevalues(){
+    /** @var xDatabaseLapsi $db */
+    $db=self::get('db');
+    $res=$db->selectByInd('entity_id','select entity_id,field_rating_criteria_values_value from field_data_field_rating_criteria_values');
+    foreach($res as &$r){
+      preg_match('/^[^\|]+/',$r['field_rating_criteria_values_value'],$mm);
+      $r['min']=$mm[0];
+      preg_match_all('/\|([^\|\s]+)\|/s',$r['field_rating_criteria_values_value'],$m);
+      $rr=[];
+      foreach($m[1] as $v){
+        $rr[]=preg_quote($v);
+      }
+      $r['reg']='/^(?:'.implode('|',$rr).')$/iu';
+      preg_match_all('/([^\|\s]+)\|([^\|\s]+)\|([^\|\s]+)/s',$r['field_rating_criteria_values_value'],$m);
+      $rr=[];
+      foreach($m[0] as $ind=>$x){
+        $rr[$m[1][$ind]]=0+$m[3][$ind];
+      }
+      $r['kid']=$rr;
+    }
+    return $res;
+  }
+
+  /**
+   * Последняя записанная в базу дата
+   * @return mixed
+   */
+  private  static function _maxdate(){
+    /** @var xDatabaseLapsi $db */
+      $db=self::get('db');
+      return $db->selectCell('select `date` from `indicator` order by date desc limit 1');
+  }
+
+  static function plural($n, $suf = '')
+  {
+    list($one, $two, $five, $trash) = explode('|', $suf . '|||', 4);
+    if ($n < 20 && $n > 9) return $five;
+    $n = $n % 10;
+    if ($n == 1) return $one;
+    if ($n < 5 && $n > 1) return $two;
+    return $five;
+  }
+
+  static function write_values($names,$ankete,$val,$comment,$change=false,$debug=false){
+        static $delta=[];
+      /** @var xDatabaseLapsi $db */
+        $db=self::get('db');
         // прочитать параметр
-        $value=$db->selectRow('select fd.entity_id as nid,fd.revision_id as vid from field_data_field_rating_value_form_data fd
-inner join field_data_field_rating_value_ind fi on fi.entity_id=fd.entity_id and  fi.revision_id=fd.revision_id
-where 
- fi.field_rating_value_ind_target_id=? and 
-fd.field_rating_value_form_data_target_id=?',$param['ind_id'],$ankete['nid']);
-        if(!empty($value)) {
-            $key=$value['nid'];
-            if(!isset($delta[$key]))$delta[$key]=0;
-            else $delta[$key]++;
+      //ищем value-node
+        $v=$db->selectRow('SELECT value_node.nid,value_node.vid, indicator.field_rating_value_ind_target_id as ind_id, cur_values.entity_id as values_nid
+FROM `field_data_field_rating_value_form_data` rvfd
+left join node value_node on value_node.nid=rvfd.entity_id and value_node.vid=rvfd.revision_id
+left join field_data_field_rating_value_ind indicator on indicator.entity_id=value_node.nid and value_node.vid=indicator.revision_id
+left join field_data_field_rating_value_cur_values cur_values on cur_values .entity_id=value_node.nid and value_node.vid=cur_values .revision_id
+WHERE rvfd.field_rating_value_form_data_target_id = ?d and indicator.field_rating_value_ind_target_id=?',$ankete['nid'],$names['ind_id']);
+        //print_r($v);
+        if(!empty($v)) {
             if(!empty($val) && preg_match('/(да)|нет/iu',$val,$m)){
                 $val=empty($m[1])?0:1;
             }
-            if(!$debug) {
-                // изменить данные
-                $k = [
-                    'entity_type' => 'node',
-                    'bundle' => 'mob_expert_rating_values',
-                    'deleted' => 0,
-                    'entity_id' => $value['nid'],
-                    'revision_id' => $value['vid'],
-                    'language' => 'und',
-                    'delta' => 0,
-                    'field_rating_value_created_value' => date("Y-m-d 00:00:00")
-                ];
-                $db->insert("insert into `field_data_field_rating_value_created` (?1[?1k]) value (?1[?2]) on duplicate key update  ?1[?1k=VALUES(?1k)]", $k);
-                $k = [
-                    'entity_type' => 'node',
-                    'bundle' => 'mob_expert_rating_values',
-                    'deleted' => 0,
-                    'entity_id' => $value['nid'],
-                    'revision_id' => $value['vid'],
-                    'language' => 'und',
-                    'delta' => 0,
-                    'field_rating_value_corrected_value' => date("Y-m-d 00:00:00")
-                ];
-                $db->insert("insert into `field_data_field_rating_value_corrected` (?1[?1k]) value (?1[?2]) on duplicate key update  ?1[?1k=VALUES(?1k)]", $k);
+//                print_r($k);
+            if(!isset($delta[$v['nid']]))$delta[$v['nid']] = 0;
+            else $delta[$v['nid']]++;
 
-                $db->update('update workflow_node set sid=28 where nid=?', $value['nid']);// 28
+          foreach (['edit', 'init', 'cur'] as $suf) {
+            $k = [
+              'entity_type' => 'node',
+              'bundle' => 'mob_expert_rating_values',
+              'deleted' => 0,
+              'entity_id' => $v['nid'],
+              'revision_id' => $v['vid'],
+              'language' => 'und',
+              'delta' => $delta[$v['nid']],];
+            $k['field_rating_value_'.$suf.'_values_first'] = $names['cr_id'];
+            $k['field_rating_value_'.$suf.'_values_second'] = $val;
 
-                $k = ['entity_type' => 'node',
-                    'bundle' => 'mob_expert_rating_values',
-                    'deleted' => 0,
-                    'entity_id' => $value['nid'],
-                    'revision_id' => $value['vid'],
-                    'language' => 'und',
-                    'delta' => $delta[$key],
-                    'field_rating_value_init_values_first' => $param['cr_id'],
-                    'field_rating_value_init_values_second' => $val];
-                $db->insert("insert into `field_data_field_rating_value_init_values` (?1[?1k]) value (?1[?2]) on duplicate key update  ?1[?1k=VALUES(?1k)]", $k);
-                $k = ['entity_type' => 'node',
-                    'bundle' => 'mob_expert_rating_values',
-                    'deleted' => 0,
-                    'entity_id' => $value['nid'],
-                    'revision_id' => $value['vid'],
-                    'language' => 'und',
-                    'delta' => $delta[$key],
-                    'field_rating_value_edit_values_first' => $param['cr_id'],
-                    'field_rating_value_edit_values_second' => $val];
-                $db->insert("insert into `field_data_field_rating_value_edit_values` (?1[?1k]) value (?1[?2]) on duplicate key update  ?1[?1k=VALUES(?1k)]", $k);
-
-                // изменить
-                $k = ['entity_type' => 'node',
-                    'bundle' => 'mob_expert_rating_values',
-                    'deleted' => 0,
-                    'entity_id' => $value['nid'],
-                    'revision_id' => $value['vid'],
-                    'language' => 'und',
-                    'delta' => $delta[$key],
-                    'field_rating_value_cur_values_first' => $param['cr_id'],
-                    'field_rating_value_cur_values_second' => $val];
-
-                $db->insert("insert into `field_data_field_rating_value_cur_values` (?1[?1k]) value (?1[?2]) on duplicate key update  ?1[?1k=VALUES(?1k)]", $k);
+            if ($change) {
+              $db->insert("INSERT INTO `field_data_field_rating_value_".$suf."_values` (?1[?1k]) VALUE (?1[?2]) ON DUPLICATE KEY UPDATE  ?1[?1k=VALUES(?1k)]", $k);
+            } else {
+              if ($debug)
+                print_r($k);
             }
-            printf(($debug?'Будет и':'И')."зменен параметр p:%s, a:%s, ind:%s, cr:%s, v:%s\n",$value['nid'],$ankete['nid'],$param['ind_id'],$param['cr_id'],$val);
+          }
+          if ($change) {
+            foreach (['created', 'corrected'] as $suf) {
+              $k = [
+                'entity_type' => 'node',
+                'bundle' => 'mob_expert_rating_values',
+                'deleted' => 0,
+                'entity_id' => $v['nid'],
+                'revision_id' => $v['vid'],
+                'language' => 'und',
+                'delta' => 0,];
+                $k['field_rating_value_'.$suf.'_value']=date("Y-m-d 00:00:00");
+              $db->insert("INSERT INTO `field_data_field_rating_value_".$suf."` (?1[?1k]) VALUE (?1[?2]) ON DUPLICATE KEY UPDATE  ?1[?1k=VALUES(?1k)]", $k);
+            }
+
+            $db->update('UPDATE workflow_node SET sid=28 WHERE nid=?', $v['nid']);// 28
+//*
+            if (!empty($comment)) {
+              foreach (['edit', 'init', 'cur'] as $suf) {
+                $k = ['entity_type' => 'node',
+                  'bundle' => 'mob_expert_rating_values',
+                  'deleted' => 0,
+                  'entity_id' => $v['nid'],
+                  'revision_id' => $v['vid'],
+                  'language' => 'und',
+                  'delta' => $delta[$v['nid']],
+                ];
+                $k['field_rating_value_' . $suf . '_comments_first'] = $names['cr_id'];
+                $k['field_rating_value_' . $suf . '_comments_second'] = $comment;
+                $db->insert("INSERT INTO `field_data_field_rating_value_" . $suf . "_comments` (?1[?1k]) VALUE (?1[?2]) ON DUPLICATE KEY UPDATE  ?1[?1k=VALUES(?1k)]", $k);
+              }
+            } else {
+              foreach (['edit', 'init', 'cur'] as $suf) {
+                $k = [
+                  'revision_id' => $v['vid'],
+                  'entity_id' => $v['nid'],
+                  'delta' => $delta[$v['nid']]
+                ];
+                $k['field_rating_value_' . $suf . '_comments_first'] = $names['cr_id'];
+                $db->delete("DELETE FROM `field_data_field_rating_value_" . $suf . "_comments` WHERE ?1[?1k=?2| AND ]", $k);
+              }
+            }
+          }
+          if($debug)
+            printf((!$change?'Будет и':'И')."зменен параметр p:%s, a:%s, ind:%s, cr:%s, v:%s\n"
+              ,$v['nid'],$ankete['nid'],$ankete['ind_id'],$names['cr_id'],$val);
+           // , print_r($ankete, true)
+            //  , print_r($names, true),$val);
         } else {
-            printf("Не найден в базе параметр a:%s, cr:%s\n",$ankete['nid'],$param['ind_id']);
+          printf("Не найден в базе параметр a:%s, cr:%s\n"
+            ,$ankete['nid'],$names['ind_id']);
         }
     }
 
     static function getCodeNames($tid=3523){
-        self::_init();
-        $db=ENGINE::db();
+      $db=self::get('db');
         $row=$db->select("SELECT pi.delta,rt.field_expert_rating_type_target_id AS rt_id, i.tid AS ind_id, i.name as ind_name, indrel.field_policy_indicators_ind_rel_value AS ind_rel, cr.field_policy_ind_criterion_target_id AS cr_id,
  crn.name,   
  crrel.field_policy_ind_crit_rel_value AS cr_rel
@@ -127,19 +194,16 @@ and p.tid=?
     }
 
     static function deletenode($nid){
-      self::_init();
-      $db=ENGINE::db();
+      $db=self::get('db');
       $row=$db->delete("delete from node where nid=?d",$nid);
     }
 
     static function getankete($id){
-        self::_init();
-        $db=ENGINE::db();
+      $db=self::get('db');
         $row=$db->select("SELECT policy_indicators.delta,taxonomy_ind_name.name as parameter,indicator.field_rating_value_ind_target_id as parameter_id,
  taxonomy_ind_cr.name as cr,
- cur_values.field_rating_value_cur_values_first as cr_id,
- -- cur_values.field_rating_value_cur_values_first AS cr_id, 
- cur_values.field_rating_value_cur_values_second AS cr_value,
+ cur_values.field_rating_value_edit_values_first as cr_id,
+ cur_values.field_rating_value_edit_values_second AS cr_value,
  workflow_states.state as wstate,
  workflow_node.sid as wstate_id, values_node.nid as value_nid
     FROM node form_data
@@ -147,14 +211,14 @@ and p.tid=?
     left JOIN node values_node ON form_data_rel.entity_id = values_node.nid
     LEFT JOIN field_data_field_rating_value_ind indicator ON values_node.nid = indicator.entity_id AND (indicator.entity_type = 'node' AND indicator.deleted = 0)
     left JOIN taxonomy_term_data taxonomy_ind_name ON indicator.field_rating_value_ind_target_id = taxonomy_ind_name.tid
-    LEFT JOIN field_data_field_rating_value_cur_values cur_values ON values_node.nid = cur_values.entity_id AND (cur_values.entity_type = 'node' AND cur_values.deleted = 0)
-    left JOIN taxonomy_term_data taxonomy_ind_cr ON cur_values.field_rating_value_cur_values_first = taxonomy_ind_cr.tid
+    LEFT JOIN field_data_field_rating_value_edit_values cur_values ON values_node.nid = cur_values.entity_id AND (cur_values.entity_type = 'node' AND cur_values.deleted = 0)
+    left JOIN taxonomy_term_data taxonomy_ind_cr ON cur_values.field_rating_value_edit_values_first = taxonomy_ind_cr.tid
 
  LEFT JOIN field_data_field_expert_rating_form_policy form_policy ON form_data.nid = form_policy.entity_id AND (form_policy.entity_type = 'node' AND form_policy.deleted = '0')
- INNER JOIN taxonomy_term_data taxonomy_term_data_field_data_field_expert_rating_form_policy ON form_policy.field_expert_rating_form_policy_target_id = taxonomy_term_data_field_data_field_expert_rating_form_policy.tid
- LEFT JOIN field_data_field_policy_indicators policy_indicators ON taxonomy_term_data_field_data_field_expert_rating_form_policy.tid = policy_indicators.entity_id AND (policy_indicators.entity_type = 'taxonomy_term' AND policy_indicators.deleted = '0')
- INNER JOIN field_collection_item fcollection ON policy_indicators.field_policy_indicators_value = fcollection.item_id
- LEFT JOIN field_data_field_policy_indicators_ind policy_indicator ON fcollection.item_id = policy_indicator.entity_id AND (policy_indicator.entity_type = 'field_collection_item' AND policy_indicator.deleted = '0')
+ --     INNER JOIN taxonomy_term_data taxonomy_term_data_field_data_field_expert_rating_form_policy ON form_policy.field_expert_rating_form_policy_target_id = taxonomy_term_data_field_data_field_expert_rating_form_policy.tid
+ LEFT JOIN field_data_field_policy_indicators policy_indicators ON form_policy.field_expert_rating_form_policy_target_id = policy_indicators.entity_id AND (policy_indicators.entity_type = 'taxonomy_term' AND policy_indicators.deleted = '0')
+ --     INNER JOIN field_collection_item fcollection ON policy_indicators.field_policy_indicators_value = fcollection.item_id
+ LEFT JOIN field_data_field_policy_indicators_ind policy_indicator ON policy_indicators.field_policy_indicators_value = policy_indicator.entity_id AND (policy_indicator.entity_type = 'field_collection_item' AND policy_indicator.deleted = '0')
 
 LEFT JOIN workflow_node workflow_node ON values_node.nid = workflow_node.nid
 LEFT JOIN workflow_states workflow_states ON workflow_node.sid = workflow_states.sid
@@ -166,9 +230,8 @@ order by policy_indicators.delta",$id);
     }
 
     static function findAnkete($nid){
-        self::_init();
-        $db=ENGINE::db();
-        $row=$db->selectRow('SELECT ank.nid,ank.title,p.field_expert_rating_form_policy_target_id as method FROM `field_data_field_expert_rating_form_mob` fmob
+      $db=self::get('db');
+        $row=$db->selectRow('SELECT ank.nid,ank.vid,ank.title,p.field_expert_rating_form_policy_target_id as method FROM `field_data_field_expert_rating_form_mob` fmob
 inner join node ank on ank.nid=fmob.entity_id and ank.vid=fmob.revision_id
 inner join field_data_field_expert_rating_form_policy p on ank.nid=p.entity_id and ank.vid=p.revision_id
 WHERE fmob.`field_expert_rating_form_mob_target_id` = ?d
@@ -176,58 +239,35 @@ order by ank.created desc',$nid);
         return $row;
     }
 
-    static function findOrgByUrl($url){
-        self::_init();
-        $db=ENGINE::db();
+    static function findOrgByUrl($url, $nopuny=false){
+      $db=self::get('db');
         $url=preg_replace(['~^https?://(www\.)?~','~/$~'],'',$url);
-        // find org
-        $row=$db->selectRow('SELECT org.title, org.nid FROM `field_data_field_mob_url`url
-inner join node org on org.nid=url.entity_id and org.vid=url.revision_id 
- where url.`field_mob_url_url` like ?l and url.bundle="mob"',$url);
-
-        return $row;
-/*
-        $info['posts'] = array();
-        $result = $db->select("SELECT `nid`, `type`, `language`, `title`, `uid`, `created` FROM `node` ORDER BY `nid`");
-        $total=mysqli_num_rows($result);
-        if (!empty($total)) {
-            $cnt=0;$timestart=microtime(true);$timecont=$timestart-20;
-            while($data = mysqli_fetch_assoc($result)) {
-                $cnt++;
-                if(microtime(true)-$timecont > 5) {
-                    $timecont=microtime(true);
-                    printf("%s of %s - %.03f ETA\n",$cnt, $total, ($timecont-$timestart)*(($total/$cnt) -1));
-                }
-                $info['posts'][$data['nid']] = array(
-                    'title' => $data['title'],
-                    'type' => $data['type'],
-                    'language' => $data['language'],
-                    'created' => $data['created'],
-                    'created_read' => date("d.m.Y, G:i:s", $data['created'])
-                );
-                $result_body = $src_dblink->query("SELECT `body_value`, `body_summary` FROM `" . $src_prefix . "field_data_body` WHERE `entity_id` = '" . $data['nid'] . "' LIMIT 1");
-                if (mysqli_num_rows($result_body)) {
-                    $data_body = mysqli_fetch_assoc($result_body);
-                    $info['posts'][$data['nid']]['text_short'] = $data_body['body_summary'];
-                    $info['posts'][$data['nid']]['text_full'] = $data_body['body_value'];
-                }
-                $result_count = $src_dblink->query("SELECT `totalcount` FROM `" . $src_prefix . "node_counter` WHERE `nid` = '" . $data['nid'] . "' LIMIT 1");
-                if (!empty($result_count) && mysqli_num_rows($result_count)) {
-                    $data_count = mysqli_fetch_assoc($result_count);
-                    $count = $data_count['totalcount'];
-                } else {
-                    $count = 0;
-                }
-                $info['posts'][$data['nid']]['reads'] = $count;
-                $info['posts'][$data['nid']]['terms'] = array();
-                $result_terms = $src_dblink->query("SELECT `rr_taxonomy_term_data`.`tid`, `rr_taxonomy_term_data`.`vid` FROM `rr_taxonomy_term_data` INNER JOIN `rr_taxonomy_index` ON `rr_taxonomy_index`.`tid` = `rr_taxonomy_term_data`.`tid` WHERE   `rr_taxonomy_index`.`nid` = '" . $data['nid'] . "' ORDER BY `vid`, `tid`");
-                if (!empty($result_terms) && mysqli_num_rows($result_terms)) {
-                    while($data_terms = mysqli_fetch_assoc($result_terms)) {
-                        $info['posts'][$data['nid']]['terms'][$data_terms['vid']][] = $data_terms['tid'];
-                    }
-                }
-            }
+        $url_utf=idn_to_utf8($url);
+        if(!empty($url_utf)){
+          $url=$url_utf;
         }
-        return false; */
+
+        // find org
+        $row=$db->selectRow('SELECT org.title, org.nid 
+FROM `field_data_field_mob_url`url
+inner join node org on org.nid=url.entity_id and org.vid=url.revision_id 
+left join field_data_field_additional_urls au on au.entity_id=org.nid and  au.revision_id=org.vid 
+left join  field_data_field_mob_register mr on mr.entity_id=org.nid and  mr.revision_id=org.vid 
+where (
+url.`field_mob_url_url` like ?1l
+or au.field_additional_urls_url like ?1l)
+ and url.bundle="mob"
+order by field(mr.field_mob_register_value, "over", "minec") desc
+limit 1',$url);
+        if($nopuny && empty($row)){
+          $url_utf=idn_to_utf8($url);
+          $url_loc=idn_to_utf8($url);
+          if(!empty($url_utf) && $url_utf!=$url){
+            return self::findOrgByUrl($url_utf, true);
+          } elseif(!empty($url_loc) && $url_loc!=$url){
+            return self::findOrgByUrl($url_loc, true);
+          }
+        }
+        return $row;
     }
 }
