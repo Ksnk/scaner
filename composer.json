@@ -24,5 +24,8 @@
         "optimize-autoloader": true
     },
     "minimum-stability": "dev",
-    "prefer-stable": true
+    "prefer-stable": true,
+    "require": {
+        "phpoffice/phpspreadsheet": "1.8.0"
+    }
 }

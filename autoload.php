@@ -67,6 +67,16 @@ class Autoload
         }
     }
 
+    static function find($file){
+        $f = str_replace('~', self::$index, $file);
+        if(file_exists($f)) return $f;
+        if(!empty(self::$phar)) {
+            $f = str_replace('~', self::$phar, $file);
+            if(file_exists($f)) return $f;
+        }
+        return false;
+    }
+
     public function __invoke($classname)
     {
         $classname = strtr($classname, self::$map);
@@ -91,12 +101,14 @@ class Autoload
         return false;
     }
 }
-if(file_exists($x=__DIR__.'/vendor/autoload.php'))
-    include_once $x;
-
 Autoload::register(['~/core', '~/libs'],
     [
         'Ksnk\\scaner\\'=>'/',
         'Ksnk\\'=>'/',
      ]
 );
+if($x=Autoload::find('~/vendor.phar'))
+    include_once 'phar://'.$x.'/vendor/autoload.php';
+else if($x=Autoload::find('~/vendor/autoload.php'))
+    include_once $x;
+

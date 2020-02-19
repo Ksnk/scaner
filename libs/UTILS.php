@@ -9,6 +9,16 @@
 class UTILS
 {
 
+    /**
+     * конвертировать в системную кодировку
+     */
+    static function _2sys($name){
+        if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN')
+            return iconv('utf-8','cp1251',$name);
+        else
+            return $name;
+    }
+
     static $months_rp = array('Января', 'Февраля', 'Марта', 'Апреля', 'Мая', 'Июня', 'Июля', 'Августа', 'Сентября', 'Октября', 'Ноября', 'Декабря');
 
     static function translit($text)
