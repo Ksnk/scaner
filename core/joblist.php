@@ -222,7 +222,6 @@ class joblist extends base
             switch ($task[0]) {
                 case "scenario":
                     $this->cdir = \UTILS::val($scn, 'dir');
-                    $this->cclass = \UTILS::val($scn, 'class');
                     if (!class_exists($scn['class'], false))
                         if (isset($scn['dir']))
                             include_once($scn['dir']);
@@ -231,6 +230,7 @@ class joblist extends base
                     if (isset($this->data[$scn['class']])) {
                         $par = $this->data[$scn['class']];
                     }
+                    $this->cclass=$scn['class'];
                     if (method_exists($scn['class'], 'get')) {
                         $class = call_user_func(array($cname, 'get'), $this, $par);
                         $this->classes[$scn['class']] = $class;
