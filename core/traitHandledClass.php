@@ -9,29 +9,58 @@
 /**
  * трейт для класса с переопределяемыми извне функциями вывода сообщенй-ошибок
  */
+
 namespace Ksnk\scaner;
+
 use \Exception;
 
 trait traitHandledClass
 {
     protected
-        $_h_error=null,
+        $_h_error = null,
+        $_h_debug = null,
         $_h_out = null;
 
-    public function _error($callback){
-        $this->_h_error=$callback;
-        return $this;
-    }
-    public function _out($callback){
-        $this->_h_out=$callback;
+    public function _error($callback=false)
+    {
+        if($callback===false) return $this->_h_error;
+        $this->_h_error = $callback;
         return $this;
     }
 
-    private function _buildMess($args){
-        if (count($args) <1) {
+    public function _debug($callback=false)
+    {
+        if($callback===false) return $this->_h_debug;
+        $this->_h_debug = $callback;
+        return $this;
+    }
+
+    public function _out($callback=false)
+    {
+        if($callback===false) return $this->_h_out ;
+        $this->_h_out = $callback;
+        return $this;
+    }
+
+    public function _same($class)
+    {
+        if(in_array(__CLASS__, class_uses($class))){
+            echo 'hello';
+        }
+        $this
+            ->_error($class->_error())
+            ->_debug($class->_debug())
+            ->_out($this->_error($class->_out()));
+        return $this;
+    }
+
+    private function _buildMess($args)
+    {
+        if (count($args) < 1) {
             return '';
-        } if (count($args) > 1) {
-            $format=array_shift($args);
+        }
+        if (count($args) > 1) {
+            $format = array_shift($args);
             return vsprintf($format, $args);
         } else {
             return $args[0];
@@ -46,12 +75,26 @@ trait traitHandledClass
      */
     protected function error($message)
     {
-        $message=$this->_buildMess(func_get_args());
-        if(is_callable($this->_h_error)){
-            $c=$this->_h_error;
-            $c($message);
+        $message = $this->_buildMess(func_get_args());
+        if (is_callable($this->_h_error)) {
+            call_user_func($this->_h_error, $message);
         } else
             throw new Exception($message);
+    }
+
+    /**
+     * отладка
+     * @param $message
+     * @return void
+     * @throws \Exception
+     */
+    protected function debug($message)
+    {
+        if (is_callable($this->_h_debug)) {
+            $message = $this->_buildMess(func_get_args());
+            call_user_func($this->_h_debug, $message);
+        }
+        //else do nothing;
     }
 
     /**
@@ -61,10 +104,9 @@ trait traitHandledClass
      */
     protected function out($message)
     {
-        $message=$this->_buildMess(func_get_args());
-        if(is_callable($this->_h_out)){
-            $c=$this->_h_out;
-            $c($message);
+        $message = $this->_buildMess(func_get_args());
+        if (is_callable($this->_h_out)) {
+            call_user_func($this->_h_out, $message);
         } else
             echo $message;
     }

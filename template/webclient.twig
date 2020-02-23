@@ -185,7 +185,7 @@
             {% if line[0]=='html' %}
                 <div>{{ line[2] }}</div>
             {% elif line[0]=='html.frame' %}
-                <div>{{ line[2] }}</div>
+                <div class="tasklog">{{ line[2] }}</div>
             {% else %}
                 <pre class="tasklog well col-xs-12">{{ line[2]| e }}</pre>
             {% endif %}
@@ -200,7 +200,14 @@
     function log(obj){
         console.log(obj.cnt);
         $('#continue input').attr("value",obj.cnt);
-        $('.tasklog:last').append(obj.log);
+        for(var i=0;i<obj.log.length;i++) {
+            var l=obj.log[i];
+            if(l[0]=='html.frame' || l[0]=='html'){
+                $('div.tasklog:last').append(l[2]);
+            } else {
+                $('pre.tasklog:last').append(l[2]);
+            }
+        }
         if(obj.cnt!=''){
             setTimeout(function(){
                 $('#continue input').trigger('click');

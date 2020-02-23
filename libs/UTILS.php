@@ -11,12 +11,39 @@ class UTILS
 
     /**
      * конвертировать в системную кодировку
+     * @param $name - имя файлв в колдировке utf
+     * @param bool $to - провести обратную перекодировку, из системной
+     * @return mixed|string
      */
-    static function _2sys($name){
-        if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN')
-            return iconv('utf-8','cp1251',$name);
-        else
+    static function _2sys($name, $to = true)
+    {
+        if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
+            $name = str_replace('\\', '/', $name);
+            if ($to)
+                return iconv('utf-8', 'cp1251', $name);
+            else
+                return iconv('cp1251', 'utf-8', $name);
+        } else
             return $name;
+    }
+
+    /**
+     * Вывести строку в printable виде
+     * @param $str - строка
+     * @return string
+     */
+    static function dumpPrintable($str)
+    {
+        $result = '';
+        for ($i = 0; $i < strlen($str); $i++) {
+            $c = ord($str{$i});
+            if ($c >= 32 && $c < 127) { // chr(127) - nonprintable
+                $result .= chr($c);
+            } else {
+                $result .= ($c < 16 ? '\x0' : '\x') . dechex($c);
+            }
+        }
+        return $result;
     }
 
     static $months_rp = array('Января', 'Февраля', 'Марта', 'Апреля', 'Мая', 'Июня', 'Июля', 'Августа', 'Сентября', 'Октября', 'Ноября', 'Декабря');
@@ -252,7 +279,7 @@ class UTILS
     }
 
     /**
-     * the future is come... sure...
+     * the future is here... sure...
      * Scaning direcory by mask + call callback then found
      * @param array|string $dirs
      * @param callable|null $callback

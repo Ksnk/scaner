@@ -57,7 +57,6 @@ class joblist extends base
         $x = -1;
         // echo '1';
         if (file_exists(self::STORE_FILE)) {
-            ;
             $x = filemtime(self::STORE_FILE);
         }
         if (!$force && $this->mtime == $x) return;
@@ -120,7 +119,10 @@ class joblist extends base
 
     function append($type, $args, $top = false)
     {
+        $store = [$this->cclass, $this->cdir];
         $this->load();
+        $this->cclass = $store[0];
+        $this->cdir = $store[1];
         if (isset($args[0]) && gettype($args[0]) == 'string') {
             // расширяем сценарий на метод того сценария, который сейчас выполняется.
             $method = $args[0];
@@ -159,7 +161,7 @@ class joblist extends base
     /**
      * @return bool
      */
-    function donext($til = 20)
+    function donext($til = 5)
     {
         $starttime = time();
         while (true) {
@@ -230,7 +232,7 @@ class joblist extends base
                     if (isset($this->data[$scn['class']])) {
                         $par = $this->data[$scn['class']];
                     }
-                    $this->cclass=$scn['class'];
+                    $this->cclass = $scn['class'];
                     if (method_exists($scn['class'], 'get')) {
                         $class = call_user_func(array($cname, 'get'), $this, $par);
                         $this->classes[$scn['class']] = $class;

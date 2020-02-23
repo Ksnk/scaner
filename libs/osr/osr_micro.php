@@ -48,7 +48,7 @@ class osr_micro
      */
     function vocabular($json_file)
     {
-        $json_file=preg_replace('/^~/',__DIR__,$json_file);
+        $json_file = preg_replace('/^~/', __DIR__, $json_file);
         if (!is_readable($json_file)) {
             $this->error('не найден словарь `%s` ', $json_file);
             return $this;
@@ -147,7 +147,7 @@ class osr_micro
      */
     function recognize($x, $y, $depth = 0, $width = 0)
     {
-        // коррренция габаритов области поиска
+        // корррекция габаритов области поиска
         if (empty($depth)) $depth = $this->img_height - 1 - $y;
         if (empty($width)) $width = $this->img_width - 1 - $x;
 
@@ -202,7 +202,7 @@ class osr_micro
             $same = 0;
             $simbol = $this->scansymbol($matrix, $same);
             if ($same < 0.9) {
-                $this->out(" не распознано, похоже на %s (%s)\n%s\n", $simbol, $same, ',{"simbol":"x","mask":[' . implode(",",array_keys($matrix)) . ']}');
+                $this->out(" не распознано, похоже на %s (%s)\n%s\n", $simbol, $same, ',{"simbol":"x","mask":[' . implode(",", array_keys($matrix)) . ']}');
             }
             $word .= $simbol;
         } while (true);
