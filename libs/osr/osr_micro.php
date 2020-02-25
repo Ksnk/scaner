@@ -147,7 +147,9 @@ class osr_micro
      */
     function recognize($x, $y, $depth = 0, $width = 0)
     {
-        // корррекция габаритов области поиска
+      if(empty($this->font))
+        return $this->error('Не загружен словарь');
+      // корррекция габаритов области поиска
         if (empty($depth)) $depth = $this->img_height - 1 - $y;
         if (empty($width)) $width = $this->img_width - 1 - $x;
 
@@ -200,6 +202,7 @@ class osr_micro
             }
             $x = $i;
             $same = 0;
+            if(empty($matrix)) continue;
             $simbol = $this->scansymbol($matrix, $same);
             if ($same < 0.9) {
                 $this->out(" не распознано, похоже на %s (%s)\n%s\n", $simbol, $same, ',{"simbol":"x","mask":[' . implode(",", array_keys($matrix)) . ']}');

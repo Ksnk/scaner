@@ -68,14 +68,20 @@ class osr_yandex_scenario extends scenario
 
     /**
      * Проверка распознавания одного элемента
-     * @param $img :file[../data/img/*.png] картинки
+     * @param $img :file[*.png|../data/img/*.png] картинки
      */
-    function do_scanImage($img)
+    function do_scanImage($img, $startwith=30)
     {
         $this->outstream(self::OUTSTREAM_HTML_FRAME);
         $osr = new osr_micro();
+        $osr->vocabular($this->vocabular);
         $osr->newImage(\UTILS::_2sys($img));
-        printf("<img src='%s'>\n", $this->imgurl . urlencode(basename($img)));
+
+        $url=preg_replace('~^.*?/scaner/~','/scaner/',$img);
+      $url=implode('/',array_map (function($a){
+        return urlencode($a);
+      },explode('/',preg_replace('~^.*?/scaner/~','/scaner/',$img))));
+      printf("<div class='col-sm-6 col-lg-4 col-6'><img src='%s'> %s, %s</div>\n", $url , $osr->recognize($startwith, 1), $url);
     }
 
     /**
