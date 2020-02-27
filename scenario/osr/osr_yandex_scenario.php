@@ -87,7 +87,7 @@ class osr_yandex_scenario extends scenario
     }
 
     function printArr($arr,$height,$width){
-      printf("<table style='line-height: 0.5em;'>");
+      printf("<div style='display:inline-block;padding:1px 3px;border:1px solid green;'><table style='line-height: 0.5em;'>");
       for($i=0;$i<$height;$i++){
         printf("<tr>");
         for($j=0;$j<$width;$j++){
@@ -95,13 +95,14 @@ class osr_yandex_scenario extends scenario
         }
         printf("</tr>");
       }
-      printf("</table><hr>");
+      printf("</table></div>");
     }
 
-    /**
-     * Вывести все символы
-     * @param int $simb для символа
-     */
+  /**
+   * Вывести все символы
+   * @param int $simb для символа
+   * @param string $dump
+   */
     function do_printMask($simb=4, $dump='')
     {
         $this->outstream(self::OUTSTREAM_HTML_FRAME);
@@ -114,6 +115,14 @@ class osr_yandex_scenario extends scenario
           }
         }
         if(!empty($dump)){
+          if(!preg_match('~\[(?:\s*\d+\s*,?)+\s*\]~',$dump)){
+            if(preg_match('~^(?:\s*\d+\s*,?)+$~',$dump)){
+              $dump='['.$dump.']';
+            }
+          }
+          if(!preg_match('~\[(?:\s*\d+\s*,?)+\s*\]~',$dump)) {
+            printf('ошибка в формате массива \$dump');
+          }
           $this->printArr(eval('return '.$dump.';'),$data['height'],$data['width']);
         }
     }

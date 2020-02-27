@@ -170,8 +170,7 @@ class osr_micro
                     //радикально черный
                     $linex[$i] += 4;
                     $liney[$j] += 4;
-                }
-                if ($pix < 0x80) { //серость
+                } else if ($pix < 0x80) { //серость
                     $linex[$i] += 1;
                     $liney[$j] += 1;
                 } // else - фон
@@ -204,32 +203,43 @@ class osr_micro
             }
           // делаем мир тоньше - в ширину, убираем двойной `пик` справа
           // убираем точку, если есть точка слева, нет точки справа, справа-снизу,справа-сверху
-          $seredina=($this->font['height']*$this->font['width'])>1;
+          $sw=$this->font['width'];
+          $sh=$this->font['height'];
+          uksort($matrix,function($a,$b) use($sw,$sh){
+            $dist=[];
+            foreach([$a,$b] as $c){
+              $ax=$c%$sw;$ay=$c%$sh;
+              $dist[]=abs(($sw/$sh)*($ax-$sw/2))+abs($ay-$sh/2);
+            }
+            return $dist[0]<$dist[1];
+          });
+          $this->debug(" - было -[%s]\n", implode(",", array_keys($matrix)));
           do {
             $changed=false;
+            // sort matrix
             foreach($matrix as $k=>$v){
               // сверху-справа
-                if (isset($matrix[$k - 1])
-                  && isset($matrix[$k + $this->font['width']])
-                  && !isset($matrix[$k + 1])
-                  && !isset($matrix[$k - $this->font['width']])
-                  && !isset($matrix[$k + 1 + $this->font['width']])
-                ) {
-                  unset($matrix[$k]);
-                  $changed = true;
-                  break;
-                }
+              if (isset($matrix[$k - 1])
+                && isset($matrix[$k + $this->font['width']])
+                && !isset($matrix[$k + 1])
+                && !isset($matrix[$k - $this->font['width']])
+                && !isset($matrix[$k + 1 + $this->font['width']])
+              ) {
+                unset($matrix[$k]);
+                $changed = true;
+                break;
+              }
               // снизу-справа
-                if (isset($matrix[$k - 1])
-                  && isset($matrix[$k - $this->font['width']])
-                  && !isset($matrix[$k + 1])
-                  && !isset($matrix[$k + 1 + $this->font['width']])
-                  && !isset($matrix[$k + $this->font['width']])
-                ) {
-                  unset($matrix[$k]);
-                  $changed = true;
-                  break;
-                }
+              if (isset($matrix[$k - 1])
+                && isset($matrix[$k - $this->font['width']])
+                && !isset($matrix[$k + 1])
+                && !isset($matrix[$k + 1 + $this->font['width']])
+                && !isset($matrix[$k + $this->font['width']])
+              ) {
+                unset($matrix[$k]);
+                $changed = true;
+                break;
+              }
               //
               if (isset($matrix[$k + 1])
                 && isset($matrix[$k + $this->font['width']])
