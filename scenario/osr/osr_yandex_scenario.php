@@ -74,7 +74,9 @@ class osr_yandex_scenario extends scenario
     {
         $this->outstream(self::OUTSTREAM_HTML_FRAME);
         $osr = new osr_micro();
-        $osr->vocabular($this->vocabular);
+        $osr
+          ->_debug(function($m){echo $m.'<br>';})
+          ->vocabular($this->vocabular);
         $osr->newImage(\UTILS::_2sys($img));
 
         $url=preg_replace('~^.*?/scaner/~','/scaner/',$img);
@@ -84,26 +86,35 @@ class osr_yandex_scenario extends scenario
       printf("<div class='col-sm-6 col-lg-4 col-6'><img src='%s'> %s, %s</div>\n", $url , $osr->recognize($startwith, 1), $url);
     }
 
+    function printArr($arr,$height,$width){
+      printf("<table style='line-height: 0.5em;'>");
+      for($i=0;$i<$height;$i++){
+        printf("<tr>");
+        for($j=0;$j<$width;$j++){
+          printf("<td>%s</td>", in_array($i*$width+$j,$arr)?'*':'');
+        }
+        printf("</tr>");
+      }
+      printf("</table><hr>");
+    }
+
     /**
      * Вывести все символы
      * @param int $simb для символа
      */
-    function do_printMask($simb=4)
+    function do_printMask($simb=4, $dump='')
     {
         $this->outstream(self::OUTSTREAM_HTML_FRAME);
-        $data=json_decode(file_get_contents($this->vocabular),true);
-        foreach($data['data'] as $simbol){
+        $data = json_decode(file_get_contents($this->vocabular), true);
+        if(''!==$simb){
+          foreach($data['data'] as $simbol){
             if($simbol['simbol']==$simb) {
-                printf("<table style='line-height: 0.5em;'>");
-                for($i=0;$i<$data['height'];$i++){
-                    printf("<tr>");
-                    for($j=0;$j<$data['width'];$j++){
-                        printf("<td>%s</td>", in_array($i*$data['width']+$j,$simbol['mask'])?'*':'');
-                    }
-                    printf("</tr>");
-                }
-                printf("</table><hr>");
+              $this->printArr($simbol['mask'],$data['height'],$data['width']);
             }
+          }
+        }
+        if(!empty($dump)){
+          $this->printArr(eval('return '.$dump.';'),$data['height'],$data['width']);
         }
     }
 }

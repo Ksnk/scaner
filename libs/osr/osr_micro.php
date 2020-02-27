@@ -147,8 +147,10 @@ class osr_micro
      */
     function recognize($x, $y, $depth = 0, $width = 0)
     {
-      if(empty($this->font))
-        return $this->error('Не загружен словарь');
+      if(empty($this->font)) {
+        $this->error('Не загружен словарь');
+        return '';
+      }
       // корррекция габаритов области поиска
         if (empty($depth)) $depth = $this->img_height - 1 - $y;
         if (empty($width)) $width = $this->img_width - 1 - $x;
@@ -196,16 +198,71 @@ class osr_micro
                 for ($j = $y; $j < $y + $this->font['height']; $j++) {
                     $pix = 0xFF & imagecolorat($this->img, $i, $j);
                     if ($pix < 0x80) {
-                        $matrix[($j - $y) * $this->font['width'] + ($i - $x)] = 1;
+                        $matrix[($j - $y) * $this->font['width'] + ($i - $x)] = $j-$y;
                     }
                 }
             }
+          // делаем мир тоньше - в ширину, убираем двойной `пик` справа
+          // убираем точку, если есть точка слева, нет точки справа, справа-снизу,справа-сверху
+          $seredina=($this->font['height']*$this->font['width'])>1;
+          do {
+            $changed=false;
+            foreach($matrix as $k=>$v){
+              // сверху-справа
+                if (isset($matrix[$k - 1])
+                  && isset($matrix[$k + $this->font['width']])
+                  && !isset($matrix[$k + 1])
+                  && !isset($matrix[$k - $this->font['width']])
+                  && !isset($matrix[$k + 1 + $this->font['width']])
+                ) {
+                  unset($matrix[$k]);
+                  $changed = true;
+                  break;
+                }
+              // снизу-справа
+                if (isset($matrix[$k - 1])
+                  && isset($matrix[$k - $this->font['width']])
+                  && !isset($matrix[$k + 1])
+                  && !isset($matrix[$k + 1 + $this->font['width']])
+                  && !isset($matrix[$k + $this->font['width']])
+                ) {
+                  unset($matrix[$k]);
+                  $changed = true;
+                  break;
+                }
+              //
+              if (isset($matrix[$k + 1])
+                && isset($matrix[$k + $this->font['width']])
+                && !isset($matrix[$k - 1])
+                && !isset($matrix[$k - 1 - $this->font['width']])
+                && !isset($matrix[$k - $this->font['width']])
+              ) {
+                unset($matrix[$k]);
+                $changed = true;
+                break;
+              }
+              //
+              if (isset($matrix[$k - 1])
+                && isset($matrix[$k + $this->font['width']])
+                && !isset($matrix[$k + 1])
+                && !isset($matrix[$k + 1 - $this->font['width']])
+                && !isset($matrix[$k - $this->font['width']])
+              ) {
+                unset($matrix[$k]);
+                $changed = true;
+                break;
+              }
+            }
+          } while($changed);
+
             $x = $i;
             $same = 0;
             if(empty($matrix)) continue;
             $simbol = $this->scansymbol($matrix, $same);
             if ($same < 0.9) {
                 $this->out(" не распознано, похоже на %s (%s)\n%s\n", $simbol, $same, ',{"simbol":"x","mask":[' . implode(",", array_keys($matrix)) . ']}');
+            } else {
+              $this->debug(" - %s (%s)\n[%s]\n", $simbol, $same, implode(",", array_keys($matrix)));
             }
             $word .= $simbol;
         } while (true);
