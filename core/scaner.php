@@ -472,13 +472,14 @@ class scaner
         return $this->buf;
     }
 
-    /**
-     * syntax parsing
-     * @param $tokens
-     * @param $pattern
-     * @param $callback
-     * @param bool $movepostotill - переместить указатель на финальную границу области
-     */
+  /**
+   * syntax parsing
+   * @param $tokens
+   * @param $pattern
+   * @param $callback
+   * @param bool $movepostotill - переместить указатель на финальную границу области
+   * @return scaner
+   */
     function syntax($tokens, $pattern, $callback, $movepostotill=true)
     {
         // so build a reg
@@ -532,6 +533,7 @@ class scaner
         }
         if($movepostotill)
           $this->position($till);
+        return $this;
     }
 
 

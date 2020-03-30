@@ -59,6 +59,9 @@ trait traitHandledClass
         if (count($args) < 1) {
             return '';
         }
+        foreach($args as &$a){
+          if(is_array($a)) $a=print_r($a,true);
+        }
         if (count($args) > 1) {
             $format = array_shift($args);
             return vsprintf($format, $args);
@@ -70,7 +73,7 @@ trait traitHandledClass
     /**
      * выбросить ашипку
      * @param $message
-     * @return void
+     * @return bool
      * @throws \Exception
      */
     protected function error($message)
@@ -80,28 +83,30 @@ trait traitHandledClass
             call_user_func($this->_h_error, $message);
         } else
             throw new Exception($message);
+        return true;
     }
 
     /**
      * отладка
      * @param $message
-     * @return void
-     * @throws \Exception
+     * @return bool
      */
-    protected function debug($message)
+    protected function debug($message='')
     {
-        if (is_callable($this->_h_debug)) {
+        if (is_callable($this->_h_debug) && !empty($message)) {
             $message = $this->_buildMess(func_get_args());
             call_user_func($this->_h_debug, $message);
         }
+        return is_callable($this->_h_debug);
         //else do nothing;
     }
 
-    /**
-     * вывести что-то кудато
-     * @param $message
-     * @throws Exception
-     */
+  /**
+   * вывести что-то кудато
+   * @param $message
+   * @return bool
+   * @throws Exception
+   */
     protected function out($message)
     {
         $message = $this->_buildMess(func_get_args());
@@ -109,6 +114,7 @@ trait traitHandledClass
             call_user_func($this->_h_out, $message);
         } else
             echo $message;
+        return true;
     }
 
 }
