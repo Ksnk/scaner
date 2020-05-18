@@ -290,26 +290,31 @@ class UTILS
         $result = array();
         if (!is_array($dirs)) $dirs = [$dirs];
         foreach ($dirs as $dir) {
-            $mask = self::masktoreg($dir);
-            list($ddir, $rest) = preg_split('~[^/]*[\*\?]~', $dir, 2);
-            $iterator = new RecursiveIteratorIterator(
-                new RecursiveDirectoryIterator($ddir), RecursiveIteratorIterator::CHILD_FIRST
-            );
-            /** @var \SplFileInfo $path */
-            foreach ($iterator as $path) {
-                if ($path->isFile() && preg_match($mask, $path->getPathname())) {
-                    $name = str_replace("\\", '/',
-                        str_replace(dirname(__FILE__) . DIRECTORY_SEPARATOR, '', $path->getPathname()));
-                    $res = 1;
-                    if (!is_null($callback)) $res = $callback($name);
-                    if ($res === false) {
-                        break 2;
-                    } else if ($res) {
-                        $result[] = $name;
+            $mask = UTILS::masktoreg($dir);
+            $dd = preg_split('~[^/]*[\*\?]~', $dir, 2);
+            if (false === $dd || count($dd) == 1) {
+                //$ddir=$dir;
+                $result[$dir] = 1;
+            } else {
+                $iterator = new \RecursiveIteratorIterator(
+                    new \RecursiveDirectoryIterator($dd[0]), \RecursiveIteratorIterator::CHILD_FIRST
+                );
+                /** @var \SplFileInfo $path */
+                foreach ($iterator as $path) {
+                    if ($path->isFile() && preg_match($mask, $path->getPathname())) {
+                        $name = str_replace("\\", '/',
+                            str_replace(dirname(__FILE__) . DIRECTORY_SEPARATOR, '', $path->getPathname()));
+                        $result[$name] = 1;
                     }
                 }
             }
         }
+        if (!is_null($callback))
+            foreach ($result as $name => $v) {
+                if ($callback($name) === false) {
+                    break;
+                }
+            }
         return $result;
     }
 

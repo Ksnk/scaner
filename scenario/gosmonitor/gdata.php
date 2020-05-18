@@ -155,6 +155,13 @@ WHERE rvfd.field_rating_value_form_data_target_id = ?d and indicator.field_ratin
                 $db->delete("DELETE FROM `field_data_field_rating_value_" . $suf . "_comments` WHERE ?1[?1k=?2| AND ]", $k);
               }
             }
+            $db->update('UPDATE `field_data_field_rating_value_max` SET field_rating_value_max_value=?1 WHERE ?2[?1k=?2| and ] and field_rating_value_max_value<?1',[
+              $val,
+            ],[
+              'bundle' => 'mob_expert_rating_values',
+              'entity_id' => $v['nid'],
+              'revision_id' =>  $v['vid']
+            ]);
           }
           if($debug)
             printf((!$change?'Будет и':'И')."зменен параметр p:%s, a:%s, ind:%s, cr:%s, v:%s\n"

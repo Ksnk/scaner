@@ -170,8 +170,7 @@ class joblist extends base
                     if (method_exists($class, 'handle')) {
                         ob_start();
                         call_user_func(array($class, 'handle'), 'complete');
-                        $result = trim(ob_get_contents());
-                        if ('' != trim($result)) {
+                        if ('' != ($result = preg_replace(['~^[ \t]+~si','~^\n+~si','~[ \t]+$~si','~^\n+$~si'],['',"\n",'',"\n"],ob_get_contents()))){
                             $this->result[] = [$this->outstream, $this->outstream_parameter, $result];
                         }
                         ob_end_clean();
@@ -243,8 +242,7 @@ class joblist extends base
                     if (method_exists($class, $scn['method'])) {
                         ob_start();
                         call_user_func_array(array($class, $scn['method']), $task[1][0]);
-                        $result = trim(ob_get_contents());
-                        if ('' != trim($result)) {
+                        if ('' != ($result = preg_replace(['~^[ \t]+~si','~^\n+~si','~[ \t]+$~si','~^\n+$~si'],['',"\n",'',"\n"],ob_get_contents()))){
                             $this->result[] = [$this->outstream, $this->outstream_parameter, $result];
                         }
                         ob_end_clean();

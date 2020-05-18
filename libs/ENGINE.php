@@ -1135,7 +1135,16 @@ UA:"{{HTTP_USER_AGENT}}"', array('type' => 'session',
                     }
                     if (!empty($query))
                         $query = '?' . $query;
-                    $z=str_replace(str_replace('\\', '/',INDEX_DIR),'',$z);
+                    if(!defined('INDEX_DIR')) {
+                        if(isset($_SERVER['SCRIPT_FILENAME']) && isset($_SERVER['SCRIPT_NAME'])){
+                            $root=str_replace($_SERVER['SCRIPT_NAME'],'',str_replace('\\', '/', $_SERVER['SCRIPT_FILENAME']));
+                        } else {
+                            $root=str_replace('\\', '/', $_SERVER['DOCUMENT_ROOT']);
+                        }
+                        $z = str_replace($root, '', $z);
+                    }
+                    else
+                        $z=str_replace(str_replace('\\', '/',INDEX_DIR),'',$z);
                     return $z . $query;
                 case 'root':
                     self::$url_path=ENGINE::option('page.rootsite', self::$url_path).$z;
@@ -1266,10 +1275,38 @@ UA:"{{HTTP_USER_AGENT}}"', array('type' => 'session',
         ob_end_clean();
         ENGINE::set_option('noreport',1);
         //echo json_encode_cyr($result);
+        $contents = utf8_encode(json_encode($result));
         if(isset($_POST['ajax']) && $_POST['ajax']=='iframe'){
-            echo '<script type="text/javascript"> top.ajax_handle('.utf8_encode(json_encode($result)).'</script>';
-        } else
-            echo utf8_encode(json_encode($result));
+            $contents= '<script type="text/javascript"> top.ajax_handle('.$contents.')</script>';
+        }
+        //echo utf8_encode(json_encode($result));
+        $HTTP_ACCEPT_ENCODING = $_SERVER["HTTP_ACCEPT_ENCODING"];
+        if( headers_sent() )
+            $encoding = false;
+        else if( strpos($HTTP_ACCEPT_ENCODING, 'x-gzip') !== false )
+            $encoding = 'x-gzip';
+        else if( strpos($HTTP_ACCEPT_ENCODING,'gzip') !== false )
+            $encoding = 'gzip';
+        else
+            $encoding = false;
+
+        if( $encoding )
+        {
+            $_temp1 = strlen($contents);
+            if ($_temp1 < 2048)    // no need to waste resources in compressing very little data
+                print($contents);
+            else
+            {
+                header('Content-Encoding: '.$encoding);
+                print("\x1f\x8b\x08\x00\x00\x00\x00\x00");
+                $contents = gzcompress($contents, 9);
+                $contents = substr($contents, 0, $_temp1);
+                print($contents);
+            }
+        }
+        else
+            echo $contents;
+
     }
 
     static function getData()

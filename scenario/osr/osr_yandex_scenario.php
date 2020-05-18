@@ -37,7 +37,8 @@ class osr_yandex_scenario extends scenario
 
             $img_file = $imgpath . $url . '.bw.png';//'ksnk.500mb.net.bw.png';
             if (!file_exists(\UTILS::_2sys($img_file))) {
-                $s = file_get_contents(sprintf('https://yandex.ru/cycounter?%s&theme=light&lang=ru', $url));
+                $spider=new spider();
+                $s = $spider->getcontents(sprintf('https://yandex.ru/cycounter?%s&theme=light&lang=ru', $url));
                 $im = imagecreatefromstring($s);
                 if ($im && imagefilter($im, IMG_FILTER_GRAYSCALE)) {
                     imagepng($im, \UTILS::_2sys($img_file));
@@ -126,4 +127,5 @@ class osr_yandex_scenario extends scenario
           $this->printArr(eval('return '.$dump.';'),$data['height'],$data['width']);
         }
     }
+
 }

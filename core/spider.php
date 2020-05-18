@@ -10,6 +10,8 @@ namespace Ksnk\scaner;
 
 /**
  * Паучёк
+ * file_get_contents ===
+ *   spider::getcontents($url)
  * Class spider
  */
 class spider extends scaner
@@ -67,6 +69,8 @@ class spider extends scaner
       curl_setopt($ch, CURLOPT_POST, 1);
       $data=\UTILS::val($opt,'data',[]);
       curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($data));
+    } else if(\UTILS::val($opt,'method')=='HEAD'){
+        curl_setopt($ch, CURLOPT_NOBODY, true);
     }
     curl_setopt($ch, CURLOPT_FAILONERROR, 1);
     curl_setopt($ch, CURLOPT_COOKIEJAR, $this->cookie_file);
@@ -78,9 +82,11 @@ class spider extends scaner
     curl_setopt($ch, CURLOPT_HEADER, 0);
     curl_setopt($ch, CURLOPT_HTTPHEADER, $header);
     curl_setopt($ch, CURLOPT_USERAGENT, $user_agent);
-    curl_setopt($ch, CURLOPT_TIMEOUT, 10); // times out after 4s
+    curl_setopt($ch, CURLOPT_TIMEOUT, 60); // times out after 4s
     curl_setopt($ch, CURLOPT_BINARYTRANSFER, 1);
     // curl_setopt($ch,CURLOPT_SSL_VERIFYPEER, false);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
 
     $x = curl_exec($ch);
     if ($this->debug()) {
@@ -135,6 +141,10 @@ Curl...: v{%s}
       );
     }
     curl_close($ch);
+    if(isset($opt['callback']) && is_callable($opt['callback'])){
+      $callback=$opt['callback'];
+      $callback($info,$x);
+    }
     if (!empty($redirect)) {
       $this->curl($redirect);
     }
@@ -157,6 +167,10 @@ Curl...: v{%s}
       $parsed['host'] = $this->lasturl['host'];
     }
     // idna
+
+    if(!isset($parsed['host'])){
+        return $url;
+    }
     $host_utf=idn_to_utf8($parsed['host']);
     $host_loc=idn_to_ascii($parsed['host']);
     if(!empty($host_utf) && $host_utf!=$parsed['host']){
@@ -164,7 +178,7 @@ Curl...: v{%s}
     } elseif(!empty($host_loc) && $host_loc!=$parsed['host']){
       $parsed['host']=$host_loc;
     }
-    if ($parsed['path']{0} != '/') {
+    if (!empty($parsed['path']) && $parsed['path']{0} != '/') {
       $parsed['path'] = preg_replace('~[^/]*$~', '', $this->lasturl['path']) . $parsed['path'];
     }
     foreach (['scheme' => '%s:', 'host' => '//%s', 'path' => '%s', 'query' => '?%s'] as $k => $v) {
@@ -226,4 +240,9 @@ Curl...: v{%s}
 
   }
 
+  function getcontents($url){
+      $this->debug=1;
+      $this->curl($url);
+      return $this->buf;
+  }
 }

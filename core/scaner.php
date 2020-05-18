@@ -155,6 +155,7 @@ class scaner
 
         $this->handle = $handle; // sign a new scan
         $this->buf = '';
+        $this->lines = [];
         $this->reset();
         return $this;
     }
@@ -266,6 +267,11 @@ class scaner
      */
     function position($pos)
     {
+        if($pos==='till'){
+            if($this->till>=0) {
+                return $this->position($this->till);
+            }
+        }
         if (!empty($this->handle)) {
             if ($this->filestart <= $pos && (mb_strlen($this->buf, '8bit') + $this->filestart) > $pos) {
                 $this->start = $pos - $this->filestart;
@@ -510,6 +516,12 @@ class scaner
                 }
                 if ($this->filestart + $this->start > $till) {
                     $this->start = $m[0][1]; // не терять тег на границе буфера todo: oppa! строка то фиксированной длины?
+                    if($this->filestart + $this->start >= $till)
+                        $skiped='';
+                    else
+                        $skiped = mb_substr($this->buf, $this->start,
+                        $till-$this->filestart,
+                        '8bit');
                     break;
                 }
                 $r = array('_skiped' => $skiped);
@@ -525,7 +537,13 @@ class scaner
             if ('' != $skiped) {
                 if (false === $callback(array('_skiped' => $skiped))) break;
             } else if (!$found) {
-                $skiped = mb_substr($this->buf, $this->start, null, '8bit');
+                if($this->filestart + $this->start >= $till)
+                    $skiped='';
+                else
+                    $skiped = mb_substr($this->buf, $this->start,
+                        $till-$this->filestart-$this->start,
+                        '8bit');
+               //$skiped = mb_substr($this->buf, $this->start, null, '8bit');
                 $this->start = mb_strlen($this->buf, '8bit');
                 if (false === $callback(array('_skiped' => $skiped))) break;
             }
@@ -534,13 +552,6 @@ class scaner
         if($movepostotill)
           $this->position($till);
         return $this;
-    }
-
-
-    function error($msg)
-    {
-        echo $msg . PHP_EOL;
-        return false;
     }
 
 }

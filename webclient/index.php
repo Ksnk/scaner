@@ -248,11 +248,23 @@ $data = array();
 
 ob_start();
 $joblist->donext();
-$result = $joblist->getResult();
+$result = [];//$joblist->getResult();
+$result=[];$lastpre='';
+foreach($joblist->getResult() as $r){
+    if($lastpre!==$r[0]){
+        $lastpre=$r[0];
+        $result[]=$r;
+        $ref_result=&$result[count($result)-1];
+    } else {
+        $ref_result[2].=$r[2];
+    }
+}
+
 if ('' != ($_r = trim(ob_get_contents()))) {
     $result[] = [$joblist::OUTSTREAM_PRE,'', $_r];
 }
 ob_end_clean();
+
 
 Autoload::register(['~/libs/template', '~/template']);
 

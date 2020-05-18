@@ -162,7 +162,7 @@ class csv extends scaner
         $col = preg_replace(['/^' . $this->quote . '/', '/' . $this->quote . '$/', '/' . $this->quote . $this->quote . '/'], ['', '', $this->quote], $m[1][0]);
         array_shift($m);
       } else // иногда, из за большого объема данных в поле, регулярка не выедает все в первый раз
-        if ($this->buf{$this->start} == $this->quote ||
+          if(isset($this->buf{$this->start}) && $this->buf{$this->start} == $this->quote ||
           preg_match($this->_reg , $this->buf, $m, PREG_OFFSET_CAPTURE, $this->start)) {
           if (empty($m)) {
             // попытка прочитать поврежденный текст
