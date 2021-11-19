@@ -194,6 +194,19 @@ class scaner
     }
 
     /**
+     * вернуть номер строки по смещению в файле
+     * @param $pos
+     * @return int|mixed
+     */
+    function findLine($pos=''){
+        if(!$this->_lines) return 0;
+        if(empty($pos)) $pos=$this->filestart+$this->start;
+        foreach ($this->lines as $k => $v) {
+            if ($k >= $pos) return $v;
+        }
+    }
+
+    /**
      * дочитываем буфер, если надо
      * @param bool $force - проверять граничный размер
      * @return bool===false - файл кончился

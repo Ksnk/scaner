@@ -84,6 +84,7 @@ PTRN2;
             while ($scaner->scan('/^(conditions)(.*)$/m', 2, 'body', 1, 'reason')->found) {
                 $res = $scaner->getResult();
                 if ($res['reason'] == 'conditions') {
+                    echo 'found condition at line '.$scaner->findLine();
                     $scaner
                         ->tillReg('/^[^\t\n]/m')// '/^\t[^\t]/m'
                         ->syntax($tokens, '/^\t+:line:/m',
