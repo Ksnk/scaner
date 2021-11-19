@@ -29,7 +29,6 @@ class readlogTest extends TestCase
         $scaner = new scaner('nolines'); // не теряем время на подсчет строк, а то крыша едет
         $scaner->newhandle($log);
         $total = 0;
-        //while ($scaner->scan('/^.*?' . preg_quote($tofind, '/') . '.*?$/m', 0, 'str')->found) {
         while (
             // времена проставлены для чтения файла напрямую, без гнузипа и пхара
             $scaner->scan('/^.*?' . preg_quote($tofind, '/') . '.*?$/m', 0, 'str')->found // поиск регуляркой 59 сек
