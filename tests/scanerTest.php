@@ -10,9 +10,12 @@ use Ksnk;
 class scanerTest extends TestCase
 {
 
-    function getScaner(){
+    function getScaner()
+    {
         $scaner = new Ksnk\scaner\scaner();
-        $scaner->_error(function($mess){ echo $mess;});
+        $scaner->_all(function ($mess) {
+            echo '>>>' . $mess . PHP_EOL;
+        });
         return $scaner;
     }
 
@@ -84,7 +87,7 @@ PTRN2;
                     $scaner
                         ->tillReg('/^[^\t\n]/m')// '/^\t[^\t]/m'
                         ->syntax($tokens, '/^\t+:line:/m',
-                            function ($line) use ( $scaner, &$conditions) {
+                            function ($line) use ($scaner, &$conditions) {
                                 if (!isset($line['value'])) $line['value'] = '';
                                 if (!empty($line['_skipped'])) {
                                     $scaner->report('ERROR:' . print_r($line, true));

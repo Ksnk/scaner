@@ -26,7 +26,7 @@ class scaner
      * Гарантируем такое пространство от курсора чтения до конца буфера.
      * Фактически - ограничение сверху на длину строки
      */
-    const GUARD_STRLEN = 20000;
+    const GUARD_STRLEN = 10000;
 
     /**
      */
@@ -48,6 +48,9 @@ class scaner
     /** @var boolean - признак успешности только что вызванной функции scan */
     var $found = false,
 
+        /** @val int - размер файла */
+        $finish = 0,
+
         /** @var int - позиция начала буфера чтения в файле */
         $filestart = 0,
 
@@ -56,16 +59,24 @@ class scaner
 
     /** @var integer */
     private
-        $result;
-    public
+        $result,
         $till = -1;
 
-    var $finish = 0,
+    private
+        /** ведем нумерацию строк или нет */
+        $_lines=true;
 
+    var
         /** @var array - массив нумерации строк */
         $lines = array(),
         /** @var int $lastline - дочитали от начала файла до такой строки */
         $lastline;
+
+    function __construct ($opt=''){
+        if(!empty($opt)){
+            $this->set_option($opt);
+        }
+    }
 
     /**
      * Выдать результат работы функций сканирования.
@@ -167,6 +178,7 @@ class scaner
      */
     function refillNL()
     {
+        if(!$this->_lines) return;
         preg_match_all('/$/m', $this->buf, $m, PREG_OFFSET_CAPTURE);
         if (isset($this->lines[$this->filestart + $m[0][0][1]])) {
             $this->lastline = $this->lines[$this->filestart + $m[0][0][1]];
@@ -363,6 +375,7 @@ class scaner
                 }
             } else { // it's a plain text
                 $y = mb_stripos($this->buf, trim($reg), $this->start, '8bit');
+                //$y = stripos($this->buf, trim($reg), $this->start);
                 if (false !== $y) {
                     if ($this->till > 0 && $this->filestart + $y + mb_strlen($reg, '8bit') > $this->till) {
                         $this->position($this->till);
