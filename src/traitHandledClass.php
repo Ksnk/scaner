@@ -8,6 +8,7 @@
 
 /**
  * трейт для класса с переопределяемыми извне функциями вывода сообщенй-ошибок
+ * + статистика и опции, не, ну а чо ?
  */
 
 namespace Ksnk\scaner;
@@ -115,6 +116,29 @@ trait traitHandledClass
         } else
             echo $message;
         return true;
+    }
+
+    /**
+     * собираем статистику
+     * @param $prop
+     * @param string $value
+     * @param string $subval
+     */
+    function stat($prop='', $value = '+1', $subval = '')
+    {
+        if(!isset($this->_stat)) return;
+        if(empty($prop)) return $this->_stat;
+        if ('+1' === $value) {
+            $this->_stat[$prop] = 1 + ($this->_stat[$prop] ?: 0);
+        } else if ('+' === $value) {
+            if (!isset($this->_stat[$prop])) {
+                $this->_stat[$prop] = $subval;
+            } else {
+                $this->_stat[$prop] .= ' ' . $subval;
+            }
+        } else {
+            $this->_stat[$prop] = $value;
+        }
     }
 
     /**

@@ -84,7 +84,7 @@ PTRN2;
             while ($scaner->scan('/^(conditions)(.*)$/m', 2, 'body', 1, 'reason')->found) {
                 $res = $scaner->getResult();
                 if ($res['reason'] == 'conditions') {
-                    echo 'found condition at line '.$scaner->findLine();
+                    echo 'found condition at line '.$scaner->findLine(); // now 14530 - must be 14492
                     $scaner
                         ->tillReg('/^[^\t\n]/m')// '/^\t[^\t]/m'
                         ->syntax($tokens, '/^\t+:line:/m',
@@ -105,6 +105,7 @@ PTRN2;
                     $scaner->until();
                 }
             }
+            print_r ($scaner->stat());
 
             $result = json_decode(
                 file_get_contents(preg_replace('~\.txt$~', '.result.json', $filename))

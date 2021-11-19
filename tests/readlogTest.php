@@ -23,18 +23,20 @@ class readlogTest extends TestCase
     {
 
         $tofind = '19/Nov/2021:07:08:32 +0000'; //'POST /login?task=user.login';
-        //$log=__DIR__.'/kadis.org-access.log';
-        $log = __DIR__ . '/kadis.org-access.log.gz';
+        $log=__DIR__.'/kadis.org-access.log';
+        //$log = __DIR__ . '/kadis.org-access.log.gz';
 
         $scaner = new scaner('nolines');
         $scaner->newhandle($log);
         $total = 0;
-        while ($scaner->scan('/^.*?' . preg_quote($tofind, '/') . '.*?$/m', 0, 'str')->found) {
+        //while ($scaner->scan('/^.*?' . preg_quote($tofind, '/') . '.*?$/m', 0, 'str')->found) {
+        while ($scaner->scan(null, 0, 'str')->found) {
             $res = $scaner->getresult();
             $total++;
             echo $res['str'] . PHP_EOL;
         }
         echo ' Всего : ' . $total;
+        print_r ($scaner->stat());
 
     }
 

@@ -20,7 +20,7 @@ class scaner
     /**
      * Читаем и дочитываем из файла вот такими кусками
      */
-    const BUFSIZE = 40000; // максимальный размер буфера чтения
+    const BUFSIZE = 80000; // максимальный размер буфера чтения
 
     /**
      * Гарантируем такое пространство от курсора чтения до конца буфера.
@@ -63,8 +63,10 @@ class scaner
         $till = -1;
 
     private
-        /** ведем нумерацию строк или нет */
-        $_lines=true;
+        /** флаг - ведем нумерацию строк или нет */
+        $_lines=true,
+        /** отладочная статистика */
+        $_stat=[];
 
     var
         /** @var array - массив нумерации строк */
@@ -160,7 +162,7 @@ class scaner
                 );
             } else {
                 $this->finish = filesize($handle);
-                $handle = fopen($handle, 'r');
+                $handle = fopen($handle, 'rb');
             }
         } else {
             //$this->finish = filesize($handle);
@@ -223,7 +225,13 @@ class scaner
                     $this->buf = $this->tail;
                 } else
                     $this->buf = mb_substr($this->buf, $this->start, null, '8bit') . $this->tail;
-                $this->buf .= fread($this->handle, self::BUFSIZE);
+
+                // похоже иногда, по собственному желанию, php ограничивает запрашиваемую длину 8136 байтами
+                do {
+                    $this->buf .= fread($this->handle, self::BUFSIZE);
+                    $this->stat('fread');
+                } while (!feof($this->handle) && mb_strlen($this->buf, '8bit')<self::BUFSIZE-self::GUARD_STRLEN);
+
                 $this->tail = '';
                 if (!feof($this->handle)) {
                     // откусываем последнюю, возможно незавершенную строку буфера, если строка не очень большая
@@ -356,8 +364,12 @@ class scaner
         do {
             $this->found = false;
 
-            if ($reg[0] == '/' || $reg[0] == '~') { // so it's a regular expresion
-                $res = preg_match($reg, $this->buf, $m, PREG_OFFSET_CAPTURE, $this->start);
+            if (is_null($reg)){
+                // читаем файл до конца
+                $this->found = false;
+            } elseif ($reg[0] == '/' || $reg[0] == '~') { // so it's a regular expresion
+                    $res = preg_match($reg, $this->buf, $m, PREG_OFFSET_CAPTURE, $this->start);
+                $this->stat('scan.preg_match');
                 if ($res) {
                     if ($this->till <= 0 || $this->finish < $this->till)
                         $till = $this->finish;
@@ -388,6 +400,7 @@ class scaner
                 }
             } else { // it's a plain text
                 $y = mb_stripos($this->buf, trim($reg), $this->start, '8bit');
+                $this->stat('scan.stripos');
                 //$y = stripos($this->buf, trim($reg), $this->start);
                 if (false !== $y) {
                     if ($this->till > 0 && $this->filestart + $y + mb_strlen($reg, '8bit') > $this->till) {
@@ -417,7 +430,7 @@ class scaner
                 } else {
                     $this->start = $x + 1;
                 }
-                if ($this->prepare()) {
+                if ($this->prepare(false)) {
                     continue;
                 } else {
                     break;
