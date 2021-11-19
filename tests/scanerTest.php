@@ -10,13 +10,19 @@ use Ksnk;
 class scanerTest extends TestCase
 {
 
+    function getScaner(){
+        $scaner = new Ksnk\scaner\scaner();
+        $scaner->_error(function($mess){ echo $mess;});
+        return $scaner;
+    }
+
     // 3 теста на черновую проверку способов вызова сканера
     public function testSyntax()
     {
         $xxx = <<<PTRN0
 Hello from somethere    
 PTRN0;
-        $scaner = new Ksnk\scaner\scaner();
+        $scaner = $this->getScaner();
         $result = $scaner
             ->newbuf($xxx)
             ->scan('/from/', 0, 'from')
@@ -32,7 +38,7 @@ PTRN0;
         $xxx = <<<PTRN2
 Hello from somethere    
 PTRN2;
-        $scaner = new Ksnk\scaner\scaner();
+        $scaner = $this->getScaner();
         $result = $scaner
             ->newbuf($xxx)
             ->scan('/from/', 0, 'from')
@@ -43,10 +49,12 @@ PTRN2;
         $this->assertEquals(['from' => 'from', 'some' => 'somethere'], $result);
     }
 
+    /**
+     * тестируется запчасть от парсера данных из игры EndlessSky
+     */
     public function testlongsintax()
     {
-
-        // открываем tgz с данными
+        // открываем tgz с данными/ Там сохраненнка и данные, которые должны получится
         $iterator = new \RecursiveIteratorIterator(
             new \RecursiveDirectoryIterator('phar://data.tgz'), \RecursiveIteratorIterator::CHILD_FIRST
         );
@@ -59,26 +67,24 @@ PTRN2;
             }
         }
 
-        $scaner = new Ksnk\scaner\scaner();
+        $scaner = $this->getScaner();
+
         foreach ($test_data as $filename => $v) {
             $scaner->newhandle($filename);
-            $events = [];
             $conditions = [];
             $tokens = [
                 'line' => [':operand:(?: +?:value:|)'],
-                'operand' => ['"[^"]*"', '\w+'],
+                'operand' => ['"[^"]*"', '[\'\w]+'],
                 'value' => ['[\S]+'],
             ];
 
             while ($scaner->scan('/^(conditions)(.*)$/m', 2, 'body', 1, 'reason')->found) {
                 $res = $scaner->getResult();
-                // $this
-                //     ->scan('/$/m');
                 if ($res['reason'] == 'conditions') {
                     $scaner
                         ->tillReg('/^[^\t\n]/m')// '/^\t[^\t]/m'
                         ->syntax($tokens, '/^\t+:line:/m',
-                            function ($line) use (&$that, $scaner, &$conditions) {
+                            function ($line) use ( $scaner, &$conditions) {
                                 if (!isset($line['value'])) $line['value'] = '';
                                 if (!empty($line['_skipped'])) {
                                     $scaner->report('ERROR:' . print_r($line, true));
