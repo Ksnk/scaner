@@ -1,42 +1,18 @@
 <?php
+/**
+ * Created by PhpStorm.
+ * базовый функционал unix консоли
+ * Date: 09.11.17
+ * Time: 11:25
+ */
 
 namespace Ksnk\scaner;
-
-/**
- * Запуск консольных команд и аналииз получившегося результата.
- * Анализ делается обычными для сканера средствами,
- * все команды из параметров begin и run собираются в одну строку
- * и выполняются при end
- *
- * Class console
- *
- * @example
- * $gitname='/opt/git/'.$project.'.git';
- * $console
- *      ->cmd('ssh root@mysite.ru')
- *      ->cmd('git','init')
- *      ->cmd('git clone --bare . ', $gitname)
- *      ->cmd('git remote add shared', $gitname)
- *      ->cmd('git push shared master')
- *      ->cmd('chown -R git .git')
- *      ->run('chown -R git', $gitname);
- */
 
 class console extends scaner
 {
 
-    var $cwd = null,
-        $cmd = '',
-        $cmds = array(),
-        $wrap = '',
-        $current_dir = '',
-        $success = false;
+    var $cwd = null, $cmd = '', $cmds = array(), $wrap = '', $current_dir = '', $success = false;
 
-    /**
-     * подготовка массива параметров для использования в командной строке
-     * @param array $args
-     * @return string
-     */
     static function _(array $args)
     {
         $cmd = array();
@@ -54,16 +30,40 @@ class console extends scaner
                 $cmd[] = escapeshellarg($arg);
             }
         }
-        return $programName . " " . implode(' ', $cmd);
+        return "$programName " . implode(' ', $cmd);
+    }
+
+    function run($cmd)
+    {
+        $args = func_get_args();
+        $cmd = self::_($args);
+        $this->success = true;
+        $this->cmds[] = $cmd . ' 2>&1';
+        return $this;
     }
 
     /**
      * @return self
      */
-    function run()
+    function begin($wrap = '')
     {
+        if ($this->cwd === NULL) // TODO: good idea??
+        {
+            $this->cwd = getcwd();
+            $this->cmds[] = 'cd ' . $this->current_dir;
+            //chdir($this->current_dir);
+        }
+        if (!empty($wrap)) {
+            $this->wrap = $wrap;
+        }
+        return $this;
+    }
 
-
+    /**
+     * @return self
+     */
+    function end()
+    {
         if (is_string($this->cwd)) {
             chdir($this->cwd);
         }
@@ -82,30 +82,10 @@ class console extends scaner
             $output[] = sprintf('Command "%s" failed (exit-code %s).', $cmd, $ret);
         }
         $this->newbuf($output);
-        $this->cwd = null;
+        $this->cwd = NULL;
         $this->cmds = array();
         $this->wrap = '';
         return $this;
     }
 
-    function cmd()
-    {
-        if ($this->cwd === NULL) // TODO: good idea??
-        {
-            $this->cwd = getcwd();
-            $this->cmds[] = 'cd ' . $this->current_dir;
-        }
-        if (!empty($wrap)) {
-            $this->wrap = $wrap;
-        }
-        $cmd = self::_(func_get_args());
-        $this->success = true;
-        $this->cmds[] = $cmd . ' 2>&1';
-        return $this;
-    }
-
-}
-
-class ConsoleException extends \Exception
-{
 }
