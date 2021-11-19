@@ -26,14 +26,19 @@ class readlogTest extends TestCase
         $log=__DIR__.'/kadis.org-access.log';
         //$log = __DIR__ . '/kadis.org-access.log.gz';
 
-        $scaner = new scaner('nolines');
+        $scaner = new scaner('nolines'); // не теряем время на подсчет строк, а то крыша едет
         $scaner->newhandle($log);
         $total = 0;
         //while ($scaner->scan('/^.*?' . preg_quote($tofind, '/') . '.*?$/m', 0, 'str')->found) {
-        while ($scaner->scan(null, 0, 'str')->found) {
+        while (
+            // времена проставлены для чтения файла напрямую, без гнузипа и пхара
+            $scaner->scan('/^.*?' . preg_quote($tofind, '/') . '.*?$/m', 0, 'str')->found // поиск регуляркой 59 сек
+            // $scaner->scan($tofind)->found // строковый поиск 2.12 todo:WTF ?
+            // $scaner->scan(null, 0, 'str')->found // проверка на чистое чтение файла от начала до конца - 55 секуннд
+        ) {
             $res = $scaner->getresult();
             $total++;
-            echo $res['str'] . PHP_EOL;
+            echo $res['str']?:$res[0] . PHP_EOL;
         }
         echo ' Всего : ' . $total;
         print_r ($scaner->stat());
