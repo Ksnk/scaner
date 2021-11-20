@@ -15,67 +15,78 @@ namespace Ksnk\scaner;
  */
 class scaner
 {
+    // добавляет функции ERROR, DEBUG, OUT, set_option, stat
     use traitHandledClass;
 
     /**
      * Читаем и дочитываем из файла вот такими кусками
      */
-    const BUFSIZE = 80000; // максимальный размер буфера чтения
+    const BUFSIZE = 40000; // максимальный размер буфера чтения
 
     /**
      * Гарантируем такое пространство от курсора чтения до конца буфера.
      * Фактически - ограничение сверху на длину строки
      */
-    const GUARD_STRLEN = 10000;
+    const GUARD_STRLEN = 20000;
 
     /**
+     * символ новой строки
      */
-    const NL = "\n"; // символ новой сроки
+    const NL = "\n";
 
 
-    /**
-     * Буфер чтения
-     * @var string
-     */
-    var $buf;
+    private
+        /**
+         * Буфер чтения
+         * @var string
+         */
+        $buf,
 
-    /** @var int - позиция начала совпадения регулярки для функции scan */
-    public $reg_begin;
+        /** @var string - служебная, хвост от предыдущей операции чтения буфера */
+        $tail = '',
 
-    /** @var string - служебная, хвост от предыдущей операции */
-    private $tail = '';
+        /** @var string - зафиксированнй результат операции scan */
+        $result,
 
-    /** @var boolean - признак успешности только что вызванной функции scan */
-    var $found = false,
+        /** @var int - ограничитель применимости операций scan и syntax - смещение в файле */
+        $till = -1,
 
-        /** @val int - размер файла */
+        $tillreg='', // способ передачи параметра в syntax,
+
+        /** флаг - ведем нумерацию строк или нет */
+        $_lines = true,
+
+        /** отладочная статистика */
+        $_stat = [];
+
+    public
+        /** @var int - позиция начала совпадения регулярки для функции scan */
+        $reg_begin,
+
+        /** @var boolean - признак успешности только что вызванной функции scan */
+        $found = false,
+
+        /** @val int - размер файла, иногда его непросто вычислить */
         $finish = 0,
 
         /** @var int - позиция начала буфера чтения в файле */
         $filestart = 0,
 
         /** @var int - позиция курсора чтения в буфере */
-        $start;
+        $start,
 
-    /** @var integer */
-    private
-        $result,
-        $till = -1;
-
-    private
-        /** флаг - ведем нумерацию строк или нет */
-        $_lines=true,
-        /** отладочная статистика */
-        $_stat=[];
-
-    var
         /** @var array - массив нумерации строк */
         $lines = array(),
-        /** @var int $lastline - дочитали от начала файла до такой строки */
-        $lastline;
 
-    function __construct ($opt=''){
-        if(!empty($opt)){
+        /** @var int $lastline - дочитали от начала файла до такой строки */
+        $lastline,
+
+        /** handle - он и в Африке handle, а может быть протектед ? */
+        $handle=null;
+
+    function __construct($opt = '')
+    {
+        if (!empty($opt)) {
             $this->set_option($opt);
         }
     }
@@ -158,14 +169,12 @@ class scaner
                 $this->finish = $x[1];
                 fclose($_handle);
                 $handle = gzopen(
-                    $handle, 'r'
+                    $handle, 'rb'
                 );
             } else {
                 $this->finish = filesize($handle);
                 $handle = fopen($handle, 'rb');
             }
-        } else {
-            //$this->finish = filesize($handle);
         }
 
         $this->handle = $handle; // sign a new scan
@@ -180,7 +189,7 @@ class scaner
      */
     function refillNL()
     {
-        if(!$this->_lines) return;
+        if (!$this->_lines) return;
         preg_match_all('/$/m', $this->buf, $m, PREG_OFFSET_CAPTURE);
         if (isset($this->lines[$this->filestart + $m[0][0][1]])) {
             $this->lastline = $this->lines[$this->filestart + $m[0][0][1]];
@@ -200,12 +209,14 @@ class scaner
      * @param $pos
      * @return int|mixed
      */
-    function findLine($pos=''){
-        if(!$this->_lines) return 0;
-        if(empty($pos)) $pos=$this->filestart+$this->start;
+    function findLine($pos = '')
+    {
+        if (!$this->_lines) return 0;
+        if (empty($pos)) $pos = $this->filestart + $this->start;
         foreach ($this->lines as $k => $v) {
             if ($k >= $pos) return $v;
         }
+        return 0;
     }
 
     /**
@@ -229,8 +240,8 @@ class scaner
                 // похоже иногда, по собственному желанию, php ограничивает запрашиваемую длину 8136 байтами
                 do {
                     $this->buf .= fread($this->handle, self::BUFSIZE);
-                    $this->stat('fread');
-                } while (!feof($this->handle) && mb_strlen($this->buf, '8bit')<self::BUFSIZE-self::GUARD_STRLEN);
+                    $this->stat('scan.fread');
+                } while (!feof($this->handle) && mb_strlen($this->buf, '8bit') < self::BUFSIZE - self::GUARD_STRLEN);
 
                 $this->tail = '';
                 if (!feof($this->handle)) {
@@ -364,12 +375,8 @@ class scaner
         do {
             $this->found = false;
 
-            if (is_null($reg)){
-                // читаем файл до конца
-                $this->found = false;
-            } elseif ($reg[0] == '/' || $reg[0] == '~') { // so it's a regular expresion
-                    $res = preg_match($reg, $this->buf, $m, PREG_OFFSET_CAPTURE, $this->start);
-                $this->stat('scan.preg_match');
+            if ($reg[0] == '/' || $reg[0] == '~') { // so it's a regular expresion
+                $res = preg_match($reg, $this->buf, $m, PREG_OFFSET_CAPTURE, $this->start);
                 if ($res) {
                     if ($this->till <= 0 || $this->finish < $this->till)
                         $till = $this->finish;
@@ -400,8 +407,6 @@ class scaner
                 }
             } else { // it's a plain text
                 $y = mb_stripos($this->buf, trim($reg), $this->start, '8bit');
-                $this->stat('scan.stripos');
-                //$y = stripos($this->buf, trim($reg), $this->start);
                 if (false !== $y) {
                     if ($this->till > 0 && $this->filestart + $y + mb_strlen($reg, '8bit') > $this->till) {
                         $this->position($this->till);
@@ -590,7 +595,7 @@ class scaner
                 }
                 if ($this->filestart + $this->start > $till) {
                     $found = false;
-                    $this->start = $m[0][1]; // не терять тег на границе буфера todo: oppa! строка то фиксированной длины?
+                    $this->start = $m[0][1]; // не терять тег на границе буфера
                     if ($this->filestart + $this->start >= $till)
                         $skiped = '';
                     else

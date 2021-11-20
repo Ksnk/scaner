@@ -44,13 +44,13 @@ trait traitHandledClass
     }
 
     // поставить все обработчики скопом
-    public function _all($class)
+    public function _all($func)
     {
-        if (is_callable($class)) {
+        if (is_callable($func)) {
             $this
-                ->_error($class)
-                ->_debug($class)
-                ->_out($class);
+                ->_error($func)
+                ->_debug($func)
+                ->_out($func);
         }
         return $this;
     }
@@ -123,10 +123,11 @@ trait traitHandledClass
      * @param $prop
      * @param string $value
      * @param string $subval
+     * @return |null
      */
     function stat($prop='', $value = '+1', $subval = '')
     {
-        if(!isset($this->_stat)) return;
+        if(!isset($this->_stat)) return null;
         if(empty($prop)) return $this->_stat;
         if ('+1' === $value) {
             $this->_stat[$prop] = 1 + ($this->_stat[$prop] ?: 0);
@@ -139,6 +140,7 @@ trait traitHandledClass
         } else {
             $this->_stat[$prop] = $value;
         }
+        return null;
     }
 
     /**
@@ -146,15 +148,15 @@ trait traitHandledClass
      * пробел.
      * параметр - внутреняя логичесская переменная класса с именем `_параметр`
      * если нужно поставить ему значение true  -'параметр', false - 'noпараметр'
+     * Фича приехала из ENGINE, хотя там она более навороченная
      *
-     * @param string|array $option строка с параметраvи, через пробел
+     * @param string|array $option строка с параметрами, через пробел
      * @example nolines par=30 write
      *
      */
     function set_option($option)
     {
         $prop = array();
-        $once = false;
         if (is_array($option)) {
             $prop = $option;
         } else if (is_string($option)) {
@@ -176,9 +178,6 @@ trait traitHandledClass
         if (!empty($prop)) {
             foreach ($prop as $o => $val) {
                 if (property_exists($this, $o = '_' . $o) && ($this->$o != $val)) {
-                    if ($once) {
-                        $this->once_options[$o] = $this->$o;
-                    }
                     $this->$o = $val;
                 }
             }

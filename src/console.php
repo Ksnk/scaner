@@ -38,7 +38,11 @@ class console extends scaner
         $args = func_get_args();
         $cmd = self::_($args);
         $this->success = true;
-        $this->cmds[] = $cmd . ' 2>&1';
+        if(PHP_OS=='WINNT'){
+            $this->cmds[] = $cmd;
+        } else {
+            $this->cmds[] = $cmd . ' 2>&1';
+        }
         return $this;
     }
 
@@ -50,7 +54,8 @@ class console extends scaner
         if ($this->cwd === NULL) // TODO: good idea??
         {
             $this->cwd = getcwd();
-            $this->cmds[] = 'cd ' . $this->current_dir;
+            if(!empty($this->current_dir))
+                $this->cmds[] = 'cd ' . $this->current_dir;
             //chdir($this->current_dir);
         }
         if (!empty($wrap)) {
