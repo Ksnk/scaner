@@ -113,7 +113,7 @@ class consoleTest extends TestCase
         } else {
             $wrap='';
         }
-        $dir='git status';
+        $dir='git status -u all';
         $dir_pattern='/^:right:\s+\d\s+:user:\s+\d+\s+:size:\s+:datetime:\s+:name:$/ium';
 
         $cmd = $this->getScaner();
@@ -138,6 +138,7 @@ class consoleTest extends TestCase
                     );
                 } else if (isset($res['line'])){
                     echo $res['line'].PHP_EOL;
+                    $found=true;
                     //echo json_encode($res['line']).PHP_EOL;
                 }
             });
