@@ -114,37 +114,16 @@ class consoleTest extends TestCase
             $wrap='';
         }
         $dir='git status -u all';
-        $dir_pattern='/^:right:\s+\d\s+:user:\s+\d+\s+:size:\s+:datetime:\s+:name:$/ium';
 
         $cmd = $this->getScaner();
-        $found=false;
-        $cmd->begin($wrap)->run($dir)->end()
-            ->syntax([
-                'line'=>'.+?',
-                'right'=>'[-drwx]+',
-                'user'=>'\w+',
-                'datetime'=>'.+?',
-                'size'=>'\d\S+',
-                'name'=>preg_quote(basename(__FILE__))
-            ],'/^:line:$/imu', //$dir_pattern,
-                function($res)use(&$found){
-                if(isset($res['name'])) {
-                    $found=true;
-                    $t=date_create_from_format('M j H:i', $res['datetime']);
-                    printf('date: %s, size: %s, name:%s' . PHP_EOL,
-                        $t->format('Y-m-d H:i'),
-                        preg_replace('/\D/', '', $res['size']),
-                        $res['name']
-                    );
-                } else if (isset($res['line'])){
-                    echo $res['line'].PHP_EOL;
-                    $found=true;
-                    //echo json_encode($res['line']).PHP_EOL;
-                }
-            });
+        $result=$cmd->begin($wrap)->run($dir)->end()
+            ->scan('/On branch\s+(\S+)/',1,'branch')
+            ->scan('/Your branch is up to date with .*$/',0,'state')
+            ->getResult();
+        // print_r($result);
+        echo $cmd->getbuf();
 
-
-        $this->assertEquals($found, true);
+        $this->assertEquals(!empty($result['branch']), true);
     }
 
 
