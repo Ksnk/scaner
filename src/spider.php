@@ -8,6 +8,8 @@
 
 namespace Ksnk\scaner;
 
+use mysql_xdevapi\Exception;
+
 /**
  * Паучёк
  * file_get_contents ===
@@ -68,11 +70,11 @@ class spider extends scaner
             );
 
             curl_setopt($ch, CURLOPT_URL, $this->siteroot); // set url to post to
-            if (\UTILS::val($opt, 'method') == 'POST') {
+            $method=$opt['method']?:'';
+            if ($method == 'POST') {
                 curl_setopt($ch, CURLOPT_POST, 1);
-                $data = \UTILS::val($opt, 'data', []);
-                curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($data));
-            } else if (\UTILS::val($opt, 'method') == 'HEAD') {
+                curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($opt['data']?:[]));
+            } else if ($method == 'HEAD') {
                 curl_setopt($ch, CURLOPT_NOBODY, true);
             }
             curl_setopt($ch, CURLOPT_FAILONERROR, 1);
@@ -86,7 +88,7 @@ class spider extends scaner
             curl_setopt($ch, CURLOPT_HTTPHEADER, $header);
             curl_setopt($ch, CURLOPT_USERAGENT, $user_agent);
             curl_setopt($ch, CURLOPT_TIMEOUT, 60); // times out after 4s
-            curl_setopt($ch, CURLOPT_BINARYTRANSFER, 1);
+           // curl_setopt($ch, CURLOPT_BINARYTRANSFER, 1);
             // curl_setopt($ch,CURLOPT_SSL_VERIFYPEER, false);
             curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
             curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
@@ -181,10 +183,8 @@ class spider extends scaner
         if (!isset($parsed['host'])) {
             return $url;
         }
-
-        $host_utf = \UTILS::idn_to_utf8($parsed['host']);
-        $host_loc = \UTILS::idn_to_ascii($parsed['host']);
-
+        $host_utf = idn_to_utf8($parsed['host'], 0 ,INTL_IDNA_VARIANT_UTS46);
+        $host_loc = idn_to_ascii($parsed['host'], 0 ,INTL_IDNA_VARIANT_UTS46);
         if (!empty($host_utf) && $host_utf != $parsed['host']) {
             $parsed['host'] = $host_utf;
         } elseif (!empty($host_loc) && $host_loc != $parsed['host']) {
@@ -220,14 +220,14 @@ class spider extends scaner
         if (is_readable($_archive)) {
             $list = $archive->add(array(
                     array(PCLZIP_ATT_FILE_NAME => $img,
-                        PCLZIP_ATT_FILE_CONTENT => $this->buf
+                        PCLZIP_ATT_FILE_CONTENT => $this->getbuf()
                     )
                 )
             );
         } else {
             $list = $archive->create(array(
                     array(PCLZIP_ATT_FILE_NAME => $img,
-                        PCLZIP_ATT_FILE_CONTENT => $this->buf
+                        PCLZIP_ATT_FILE_CONTENT => $this->getbuf()
                     )
                 )
             );
@@ -256,6 +256,6 @@ class spider extends scaner
     {
         $this->debug = 1;
         $this->curl($url);
-        return $this->buf;
+        return $this->getbuf();
     }
 }
