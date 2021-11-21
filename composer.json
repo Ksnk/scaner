@@ -1,7 +1,5 @@
 {
     "name": "ksnk/scaner",
-    "version": "1.0.2",
-    "type": "library",
     "description": "Scaner is a PHP client library",
     "keywords": ["framework", "client"],
     "license": "MIT",
