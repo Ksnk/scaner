@@ -66,7 +66,8 @@ class consoleTest extends TestCase
     public function testDirGitBash()
     {
         if(PHP_OS=='WINNT'){
-            $wrap='"c:\Program Files\Git\bin\bash.exe" -c';
+            if(file_exists('c:\Program Files\Git\bin\bash.exe'))
+                $wrap='"c:\Program Files\Git\bin\bash.exe" -c';
         } else {
             $wrap='';
         }
@@ -126,6 +127,14 @@ class consoleTest extends TestCase
         $this->assertEquals(!empty($result['branch']), true);
     }
 
+
+    function testExec(){
+        $console=$this->getScaner();
+
+        $console->run('ls')
+            ->exec('"c:\Program Files\Git\bin\bash.exe"');
+        echo $console->getbuf();
+    }
 
 }
 

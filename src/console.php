@@ -13,6 +13,8 @@ class console extends scaner
 
     var $cwd = null, $cmd = '', $cmds = array(), $wrap = '', $current_dir = '', $success = false;
 
+    var $ontextevents=[];
+
     static function _(array $args)
     {
         $cmd = array();
@@ -93,4 +95,101 @@ class console extends scaner
         return $this;
     }
 
+    /**
+     * новые функции интерфейса
+     */
+
+    /**
+     * обработчик реакции на попытку запросить данные консолью
+     * @param $pattern
+     * @param $callable
+     */
+    function ontext($pattern, $callable){
+        $this->ontextevents[]=['pattern'=>$pattern, 'callable'=>$callable];
+        return $this;
+    }
+
+    private function non_block_read(&$pipes) {
+        $starttime=microtime(true);
+        while(microtime(true)-$starttime<1) {
+            $read = array($pipes[1]);
+            $write = array();
+            $except = array();
+            $result = stream_select($read, $write, $except, 0);
+            if($result === false) {
+                throw new \Exception('stream_select failed');
+            }
+            if($result === 0) {
+                continue;
+            };
+            if(!feof($pipes[1])) {
+                stream_set_blocking($pipes[1], false);
+                $x = stream_get_contents($pipes[1], -1);
+   //             $x = stream_get_contents($pipes[1], 1);
+            }
+            if($x=='') continue;
+            $pos=$this->getpos();
+            $this->appendbuf($x);
+            foreach($this->ontextevents as $v){
+                if (empty($v['pattern']) || $this->scan($v['pattern'])->found){
+                    if(is_callable($v['callable'])){
+                        $x=call_user_func($v['callable'],$this);
+                    } else {
+                        $x=$v['callable'];
+                    }
+                    if(empty($v['pattern'])){
+                        array_shift($this->ontextevents);
+                    }
+                    if(!empty($x)) {
+                        fwrite($pipes[0],$x);
+                        break;
+                    }
+                }
+                $this->position($pos);
+            }
+        }
+    }
+
+    /**
+     * выполнить команду в итерактивном режиме, с вводом-выводом на лету
+     * @param $cmd
+     * @return console
+     * @throws \Exception
+     */
+    function exec($cmd){
+        $this->cmd = $cmd;
+
+        $descriptorspec = array(
+            0 => array("pipe", "r"),  // stdin - канал, из которого дочерний процесс будет читать
+            1 => array("pipe", "w"),  // stdout - канал, в который дочерний процесс будет записывать
+            2 => array("pipe", "w") // stderr - файл для записи
+        );
+
+        $cwd = '/tmp';
+        $env = array('some_option' => 'aeiou');
+        $process = proc_open($this->cmd, $descriptorspec, $pipes, $cwd, $env);
+        if (is_resource($process)) {
+
+            if(!empty($this->cmds)){
+                $r=array_shift($this->cmds);
+                fwrite($pipes[0],$r.PHP_EOL);
+            }
+            $this->non_block_read($pipes);
+        }
+
+        fclose($pipes[0]);
+        $err= stream_get_contents($pipes[2]);
+        fclose($pipes[2]);
+        if(strlen($err)>0){
+            $this->error($err);
+        }
+        if(!feof($pipes[1])) {
+            stream_set_blocking($pipes[1], false);
+            $this->appendbuf(stream_get_contents($pipes[1], 0));
+        }
+        fclose($pipes[1]);
+        $return_value = proc_close($process);
+        $this->found= $return_value;
+        return $this;
+    }
 }

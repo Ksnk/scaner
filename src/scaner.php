@@ -124,6 +124,21 @@ class scaner
     }
 
     /**
+     * дописать буфер ввода
+     * @param $buf - Строка для анализа
+     * @return $this
+     */
+    protected function appendbuf($buf)
+    {
+        if (is_array($buf)) { // source from `file` function
+            $buf = implode(self::NL, $buf);
+        }
+        $this->buf .= $buf; // run the new scan
+        $this->finish+= mb_strlen($buf, '8bit');
+        return $this;
+    }
+
+    /**
      * Сброс сканера для обработки следующего буфера
      */
     function reset()
