@@ -12,7 +12,7 @@ class consoleTest extends TestCase
     {
         $scaner = new Ksnk\scaner\console();
         $scaner->_all(function ($mess) {
-            echo '>>>' . $mess . PHP_EOL;
+            echo '!!!' . $mess . PHP_EOL;
         });
         return $scaner;
     }
@@ -130,10 +130,31 @@ class consoleTest extends TestCase
 
     function testExec(){
         $console=$this->getScaner();
+        $phps=[
+//    'xx',
+//    '"c:\Program Files\Git\bin\bash.exe"',
+            'D:\download\openserver\OpenServer\modules\php\PHP_7.3\php.exe',
+            'D:\tmp\OpenServer\modules\php\PHP_7.3\php.exe'
+        ];
+        if(!file_exists($phps[0])) array_shift($php);
 
-        $console->run('ls')
+        $php= <<<'PHP'
+$stdin = fopen('php://stdin', 'r');
+stream_set_blocking($stdin, false);
+echo 'Press enter to force run command...' . PHP_EOL;
+echo fgets($stdin);
+echo "OK! let's go." . PHP_EOL;
+PHP;
+        $console
+            ->run('ls -all')
+            ->run('git status -u all')
+            ->run('"'.$phps[0].'"')
+            ->run(['<?php '.$php.' ?'.'>'])
+            ->run(['pattern'=>'~command\.\.\.~s', 'callable'=>'Hello'."\n"])
+            ->run('exit')
             ->exec('"c:\Program Files\Git\bin\bash.exe"');
         echo $console->getbuf();
+        $this->assertEquals(true, true);
     }
 
 }

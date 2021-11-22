@@ -37,13 +37,17 @@ class console extends scaner
 
     function run($cmd)
     {
-        $args = func_get_args();
-        $cmd = self::_($args);
-        $this->success = true;
-        if(PHP_OS=='WINNT'){
+        if(is_array($cmd)){
             $this->cmds[] = $cmd;
         } else {
-            $this->cmds[] = $cmd . ' 2>&1';
+            $args = func_get_args();
+            $cmd = self::_($args);
+            $this->success = true;
+            //      if(PHP_OS=='WINNT'){
+            $this->cmds[] = $cmd;
+            //       } else {
+            //          $this->cmds[] = $cmd . ' 2>&1';
+            //      }
         }
         return $this;
     }
@@ -109,7 +113,7 @@ class console extends scaner
         return $this;
     }
 
-    private function non_block_read(&$pipes) {
+    private function non_block_read(&$pipes, $v=false) {
         $starttime=microtime(true);
         while(microtime(true)-$starttime<1) {
             $read = array($pipes[1]);
@@ -124,14 +128,16 @@ class console extends scaner
             };
             if(!feof($pipes[1])) {
                 stream_set_blocking($pipes[1], false);
-                $x = stream_get_contents($pipes[1], -1);
+                $x = stream_get_contents($pipes[1], 1);
    //             $x = stream_get_contents($pipes[1], 1);
+            } else {
+                $x = '';
             }
             if($x=='') continue;
             $pos=$this->getpos();
             $this->appendbuf($x);
-            foreach($this->ontextevents as $v){
-                if (empty($v['pattern']) || $this->scan($v['pattern'])->found){
+            if(!empty($v)){
+                if ( $this->scan($v['pattern'])->found){
                     if(is_callable($v['callable'])){
                         $x=call_user_func($v['callable'],$this);
                     } else {
@@ -167,15 +173,20 @@ class console extends scaner
 
         $cwd = '/tmp';
         $env = array('some_option' => 'aeiou');
-        $process = proc_open($this->cmd, $descriptorspec, $pipes, $cwd, $env);
+        $process = proc_open($this->cmd, $descriptorspec, $pipes, getcwd(), $env);
         if (is_resource($process)) {
-
-            if(!empty($this->cmds)){
-                $r=array_shift($this->cmds);
-                fwrite($pipes[0],$r.PHP_EOL);
+            foreach($this->cmds as $c) {
+                if(is_array($c)){
+                    if(isset($c['pattern'])) {
+                        $this->non_block_read($pipes, $c);
+                    } else
+                        fwrite($pipes[0], $c[0]);
+                } else {
+                    fwrite($pipes[0], $c . "\n");
+                }
             }
-            $this->non_block_read($pipes);
         }
+        //$this->non_block_read($pipes);
 
         fclose($pipes[0]);
         $err= stream_get_contents($pipes[2]);
@@ -183,10 +194,7 @@ class console extends scaner
         if(strlen($err)>0){
             $this->error($err);
         }
-        if(!feof($pipes[1])) {
-            stream_set_blocking($pipes[1], false);
-            $this->appendbuf(stream_get_contents($pipes[1], 0));
-        }
+        $this->appendbuf(stream_get_contents($pipes[1], -1));
         fclose($pipes[1]);
         $return_value = proc_close($process);
         $this->found= $return_value;

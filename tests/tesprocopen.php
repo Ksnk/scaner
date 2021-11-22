@@ -8,14 +8,15 @@ $descriptorspec = array(
 
 $cwd = '/tmp';
 $env = array('some_option' => 'aeiou');
-$php=[
+$phps=[
 //    'xx',
 //    '"c:\Program Files\Git\bin\bash.exe"',
     'D:\download\openserver\OpenServer\modules\php\PHP_7.3\php.exe',
     'D:\tmp\OpenServer\modules\php\PHP_7.3\php.exe'
 ];
-if(!file_exists($php[0])) array_shift($php);
-$process = proc_open($php[0], $descriptorspec, $pipes, $cwd, $env);
+if(!file_exists($phps[0])) array_shift($php);
+
+$process = proc_open('"c:\Program Files\Git\bin\bash.exe"', $descriptorspec, $pipes, $cwd, $env);
 //socket_set_nonblock($pipes[1]);
 stream_set_blocking($pipes[1],false);
 if (is_resource($process)) {
@@ -48,9 +49,10 @@ PHP;
     }
 
 
+    fwrite($pipes[0], '"'.$phps[0].'"'."\n");
 
     fwrite($pipes[0], '<?php '.$php.' ?'.'>');
-//    fwrite($pipes[0], "echo 1; exit\n");
+//    fwrite($pipes[0], "ls;exit\n");
 //    fwrite($pipes[0], "\n");
     $output='';
     $starttime=microtime(true);
@@ -70,6 +72,7 @@ PHP;
         }
     }
     echo "Output: >>" . $output.'>>';
+    fwrite($pipes[0], "exit\n");
     fclose($pipes[0]);
  //   rewind($pipes[2]);
     $err= stream_get_contents($pipes[2]);
