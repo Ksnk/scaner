@@ -136,7 +136,7 @@ class consoleTest extends TestCase
             'D:\download\openserver\OpenServer\modules\php\PHP_7.3\php.exe',
             'D:\tmp\OpenServer\modules\php\PHP_7.3\php.exe'
         ];
-        if(!file_exists($phps[0])) array_shift($php);
+        if(!file_exists($phps[0])) array_shift($phps);
 
         $php= <<<'PHP'
 $stdin = fopen('php://stdin', 'r');
@@ -154,6 +154,27 @@ PHP;
             ->run('exit')
             ->exec('"c:\Program Files\Git\bin\bash.exe"');
         echo $console->getbuf();
+        $this->assertEquals(true, true);
+    }
+
+
+    function testSidek(){
+         //[sudo] password for saidek:
+        $host='saidek@192.168.2.24';
+        $pass='RAUMkDbQS4GxibhPu3';
+        $console=$this->getScaner();
+        $dir=getcwd();
+        chdir('c:\Program Files\Git');
+        $console
+            ->run('ssh '.$host.'  /bin/bash  -c echo "These commands will be run on: $( uname -a )"')//.$host)
+            //->run('ssh -o StrictHostKeyChecking=no '.$host.' uptime  /bin/bash  -c echo "These commands will be run on: $( uname -a )"')//.$host)
+            //->run('ssh -tt -o GlobalKnownHostsFile="/c/Users/korjakin_s/.ssh/known_hosts" '.$host.' "echo \'Hello\'"')//.$host)
+            ->run([$pass])
+            ->run('exit')
+            ->run('exit')
+            ->exec('bin\bash.exe -i');
+        echo $console->getbuf();
+        chdir($dir);
         $this->assertEquals(true, true);
     }
 
