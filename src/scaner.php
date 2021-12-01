@@ -35,12 +35,14 @@ class scaner
     const NL = "\n";
 
 
-    private
+    protected
         /**
          * Буфер чтения
          * @var string
          */
-        $buf,
+        $buf;
+
+    private
 
         /** @var string - служебная, хвост от предыдущей операции чтения буфера */
         $tail = '',
