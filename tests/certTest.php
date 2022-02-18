@@ -53,7 +53,9 @@ class certTest extends TestCase
         $fault=0;
         foreach([
             'new.snabworld.ru',
+            'paabox.ru',
             'eco-bakaleya.ru',
+            'vape-sklad.ru',
             'kadis.org','consultant.kadis.org','info.kadis.org',
             'outportal.kadis.org',
             'audit.kadis.org',
