@@ -45,9 +45,12 @@ class spider extends scaner
         try {
 
             $ch = curl_init();
-            $opt = [
-                    'level' => 1
-                ] + $opt;
+            $opt = $opt + [
+                    'level' => 1,
+                    'data'=>[],
+                    'method'=>'GET',
+                    'file'=>false
+                ] ;
             $this->siteroot = $this->buildurl($url, true);
             $redirect = '';
             if ($this->debug()) {
@@ -68,6 +71,9 @@ class spider extends scaner
                 "Upgrade-Insecure-Requests: 1",
                 //           "Keep-Alive: 300"
             );
+            if(!empty($opt['headers'])) {
+                $header = array_merge($header, $opt['headers']);
+            }
 
             curl_setopt($ch, CURLOPT_URL, $this->siteroot); // set url to post to
             $method=$opt['method']?:'';
@@ -92,6 +98,11 @@ class spider extends scaner
             // curl_setopt($ch,CURLOPT_SSL_VERIFYPEER, false);
             curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
             curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+            $fp=false;
+            if($opt['file']) {
+                $fp = fopen ($opt['file'], 'w+');
+                curl_setopt($ch, CURLOPT_FILE, $fp);
+            }
 
             $x = curl_exec($ch);
             if ($this->debug()) {
@@ -147,6 +158,9 @@ class spider extends scaner
                 );
             }
             curl_close($ch);
+            if($opt['file']) {
+                fclose($fp);
+            }
             if (isset($opt['callback']) && is_callable($opt['callback'])) {
                 $callback = $opt['callback'];
                 $callback($info, $x);
