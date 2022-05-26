@@ -130,7 +130,7 @@ trait traitHandledClass
         if(!isset($this->_stat)) return null;
         if(empty($prop)) return $this->_stat;
         if ('+1' === $value) {
-            $this->_stat[$prop] = 1 + ($this->_stat[$prop] ?: 0);
+            $this->_stat[$prop] = 1 + (empty($this->_stat[$prop])?0: $this->_stat[$prop]);
         } else if ('+' === $value) {
             if (!isset($this->_stat[$prop])) {
                 $this->_stat[$prop] = $subval;
