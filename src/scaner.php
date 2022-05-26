@@ -156,7 +156,9 @@ class scaner
     function close()
     {
         if (!empty($this->handle)) {
-            fclose($this->handle);
+            if(is_resource($this->handle)) {
+                fclose($this->handle);
+            }
             $this->handle = false;
         }
     }
