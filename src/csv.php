@@ -52,43 +52,33 @@ class csv extends scaner
         $class = new self();
         if (!preg_match('/[\n\r]$/', $string)) $string .= "\n";
         $class->newbuf($string);
-        if (!isset($param['encoding'])) {
-            $param['encoding'] = strtolower(mb_detect_encoding($string, 'utf-8', true))
-                ? 'utf-8' : 'cp1251';
-        }
-        $class->param($param);
+        $class->autodetect();
         return $class;
     }
 
-    /**
-     * функция выдает класс csv с правильно определенной кодировкой и делимитерами
-     * @param $nameresource
-     * @param $headers - количество строк на заголовок.
-     * @return csv
-     */
-    static function getcsv($nameresource, $headers = 1)
-    {
-        $class = new self();
-        $class->newhandle($nameresource);
-
-        $class->prepare();
-        $buf = $class->getbuf();
-        if ($encoding = strtolower(mb_detect_encoding($buf, 'utf-8', true))) {
-            $class->param(['encoding' => strtolower($encoding)]);
+    function autodetect(){
+        $buf = $this->getbuf();
+        if ($encoding = mb_detect_encoding($buf, 'utf-8', true)) {
+            $encoding = strtolower($encoding);
         }
         // первые 2-3 символа - не БОМ?
         if (preg_match('~^(' . self::BOM . '|' . self::LE16 . ')~', $buf, $m)) {
             if ($m[0] == self::BOM) {
-                $class->param(['encoding' => 'utf-8']);
-                $class->hasbom = 3;
-                $class->position(3);
+                $encoding = 'utf-8';
+                $this->hasbom = 3;
+                $this->position(3);
             } else {
                 $encoding = 'utf-16RLE';//todo сделать ?
-                $class->hasbom = 2;
-                $class->position(2);
+                $this->hasbom = 2;
+                $this->position(2);
             }
         }
-        $the_start = $class->getpos();
+        if(!empty($encoding)){
+            $this->param([
+                'encoding' => $encoding,
+            ]);
+        }
+        $the_start = $this->getpos();
         foreach (['"', "'"] as $quote) foreach ([',', ";", "\t"] as $delim) {
             $start = $the_start;
             $cols = 0;
@@ -119,9 +109,9 @@ class csv extends scaner
                     }
                     $row = 0;
                     $start = $m[4][1];
-                    if (++$rows > 6 || $start > scaner::BUFSIZE >> 1 || $start >= $class->finish) {
+                    if ($rows++ > 6 || $start > scaner::BUFSIZE >> 1 || $start >= $this->finish) {
                         // проверка пройдена, заканчиваем
-                        $class->param([
+                        $this->param([
                             'delim' => $delim,
                             'quote' => $quote,
                             'encoding' => $encoding,
@@ -140,6 +130,22 @@ class csv extends scaner
                 $row++;
             }
         }
+    }
+
+    /**
+     * функция выдает класс csv с правильно определенной кодировкой и делимитерами
+     * @param $nameresource
+     * @param $headers - количество строк на заголовок.
+     * @return csv
+     */
+    static function getcsv($nameresource, $headers = 1)
+    {
+        $class = new self();
+        $class->newhandle($nameresource);
+
+        $class->prepare();
+        $class->autodetect();
+
         return $class;
     }
 
