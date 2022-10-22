@@ -1,7 +1,7 @@
 <?php
 /**
  * Created by PhpStorm.
- * User: Аня
+ * ножичек перочинный.
  * Date: 06.12.15
  * Time: 12:36
  */
@@ -64,7 +64,11 @@ class UTILS
         return $text;
     }
 
-
+    /**
+     * Проверка, что то, что прилетело имеет utf-8 кодирование
+     * @param $string
+     * @return false|int
+     */
     static function detectUTF8($string)
     {
         return preg_match('%(?:
@@ -173,6 +177,10 @@ class UTILS
         }
     }
 
+    /**
+     * заменитель getallheaders для системы
+     * @return array|false
+     */
     static function getallheaders()
     {
         if (function_exists('getallheaders')) {
@@ -268,7 +276,7 @@ class UTILS
                     $v = $default;
                     break;
                 }
-            } elseif (isset($v[$xx])) {
+            } elseif (is_array($v) && isset($v[$xx])) {
                 $v = $v[$xx];
             } else {
                 $v = $default;
@@ -317,5 +325,89 @@ class UTILS
             }
         return $result;
     }
+
+    /**
+     * detect if running in CLI mode
+     * @return bool
+     */
+    static function is_cli()
+    {
+        if( defined('STDIN') )
+        {
+            return true;
+        }
+
+        if( empty($_SERVER['REMOTE_ADDR']) and !isset($_SERVER['HTTP_USER_AGENT']) and count($_SERVER['argv']) > 0)
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * умная склейка массивов в глубину, ветка вливается в существующую с сохранением предыдущих значений
+     * @param $tomerge
+     * @param $part
+     * @return bool - вклеилось или нет.
+     */
+    static function array_merge_deep(&$tomerge, $part)
+    {
+        $result = false;
+        // ассоциативный массив
+        foreach ($part as $k => &$v) {
+            if (array_key_exists($k, $tomerge)) {
+                if (is_array($tomerge[$k]) && is_array($v)) {
+                    $result = self::array_merge_deep($tomerge[$k], $v) || $result;
+                } elseif (is_null($v)) {
+                    if (isset($tomerge[$k])) {
+                        unset($tomerge[$k]);
+                        $result = true;
+                    }
+                } else {
+                    if (isset($tomerge[$k]) && $tomerge[$k] != $v) {
+                        $tomerge[$k] = $v;
+                        $result = true;
+                    }
+                }
+            } elseif (!is_null($v)) {
+                $tomerge[$k] = $v;
+                $result = true;
+            }
+        }
+        unset ($v);
+        return $result;
+    }
+
+    /**
+     * умная очистка значений в глубину
+     * @param $tomerge
+     * @param $part
+     * @return bool
+     */
+    static function array_clear_deep(&$tomerge, &$part)
+    {
+        $result = false;
+        foreach ($part as $k => &$v) {
+            if (array_key_exists($k, $tomerge)) {
+                if (is_array($tomerge[$k]) && is_array($v)) {
+                    $result = self::array_clear_deep($tomerge[$k], $v) || $result;
+                    if(count($tomerge[$k])==0){
+                        unset($tomerge[$k]);
+                        $result = true;
+                    }
+                } else {
+                    if (isset($tomerge[$k])) {
+                        unset($tomerge[$k]);
+                        $result = true;
+                    }
+                }
+            }
+        }
+        unset ($v);
+        return $result;
+    }
+
+
 
 }

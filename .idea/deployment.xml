@@ -9,6 +9,13 @@
           </mappings>
         </serverdata>
       </paths>
+      <paths name="500mb.net">
+        <serverdata>
+          <mappings>
+            <mapping local="$PROJECT_DIR$" web="/" />
+          </mappings>
+        </serverdata>
+      </paths>
       <paths name="Sabre">
         <serverdata>
           <mappings>
@@ -290,13 +297,6 @@
         </serverdata>
       </paths>
       <paths name="vmireshtor">
-        <serverdata>
-          <mappings>
-            <mapping local="$PROJECT_DIR$" web="/" />
-          </mappings>
-        </serverdata>
-      </paths>
-      <paths name="xilen.ezavod">
         <serverdata>
           <mappings>
             <mapping local="$PROJECT_DIR$" web="/" />

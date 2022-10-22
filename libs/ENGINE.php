@@ -5,7 +5,7 @@
  * $Id: X-Site cms (2.0, LapsiTV build), written by Ksnk (sergekoriakin@gmail.com),
  * ver: xxx, Last build: 1812031618
  * status : draft build.
- * GIT: origin	https://github.com/Ksnk/ENGINE.git (push)$
+ * GIT: origin    https://github.com/Ksnk/ENGINE.git (push)$
  * ----------------------------------------------------------------------------------
  * License MIT - Serge Koriakin - 2012-2018
  * ----------------------------------------------------------------------------------
@@ -18,12 +18,13 @@
  * Class xData -data-holder,
  * базовый класс для хранителя данных для шаблонов
  */
-class xData implements  Iterator {
+class xData implements Iterator
+{
 
     /**
      * @var array
      */
-    static $items=array();
+    static $items = array();
 
     /**
      * система кэширования однотипных данных. Все данные различаются полем ID.
@@ -33,70 +34,81 @@ class xData implements  Iterator {
      * @param array $data
      * @return mixed
      */
-    static function get($class,$id,$data=array()){
-        if(!isset(self::$items[$class]))
-            self::$items[$class]=array();
-        if(is_array($id)) {
-            if(!isset(self::$items[$class][$id['id']]))
-                self::$items[$id['id']]=new $class($id,$data);
+    static function get($class, $id, $data = array())
+    {
+        if (!isset(self::$items[$class]))
+            self::$items[$class] = array();
+        if (is_array($id)) {
+            if (!isset(self::$items[$class][$id['id']]))
+                self::$items[$id['id']] = new $class($id, $data);
             return self::$items[$class][$id['id']];
-        } else if(!isset(self::$items[$class][$id])) {
-            self::$items[$class][$id]=new $class($id,$data);
+        } else if (!isset(self::$items[$class][$id])) {
+            self::$items[$class][$id] = new $class($id, $data);
         }
         return self::$items[$class][$id];
     }
 
-    protected $data=array();
+    protected $data = array();
     private $def = '';
 
-    function getData(){
+    function getData()
+    {
         return $this->data;
     }
 
-    function __construct($data,$def=''){
-        foreach($data as $k=>$v){
-            if(is_array($v))
-                $this->data[$k]=new self($v,$def);
+    function __construct($data, $def = '')
+    {
+        foreach ($data as $k => $v) {
+            if (is_array($v))
+                $this->data[$k] = new self($v, $def);
             else
-                $this->data[$k]=$v;
+                $this->data[$k] = $v;
         }
-        $this->def=$def;
+        $this->def = $def;
     }
 
-    protected function  &resolve($name){
-        if(!array_key_exists($name,$this->data))
-            $this->data[$name]=$this->def;
+    protected function  &resolve($name)
+    {
+        if (!array_key_exists($name, $this->data))
+            $this->data[$name] = $this->def;
         return $this->data[$name];
     }
 
-    function &__get($name){
-        if(array_key_exists($name,$this->data))
+    function &__get($name)
+    {
+        if (array_key_exists($name, $this->data))
             return $this->data[$name];
         else {
-            $x=$this->resolve($name);
+            $x = $this->resolve($name);
             return $x;
         }
     }
+
     public function __set($name, $value)
     {
         // echo "Setting '$name' to '$value'\n";
         $this->data[$name] = $value;
     }
+
     // итератор
-    function rewind() {
+    function rewind()
+    {
         // $this->eoa=true;//count($this->data==0);
         reset($this->data);
     }
 
-    function current() {
+    function current()
+    {
         return current($this->data);
     }
 
-    function key() {
+    function key()
+    {
         return key($this->data);
     }
 
-    function next() {
+    function next()
+    {
         return next($this->data);
     }
 
@@ -106,14 +118,17 @@ class xData implements  Iterator {
         return ($key !== NULL && $key !== FALSE);
     }
 
-    }
+}
 
-interface engine_cache {
+interface engine_cache
+{
     static function cache($key, $value = null, $time = null, $tags = null);
-    }
+}
 
-interface engine_options {
+interface engine_options
+{
     function get($name);
+
     function set($name, $value = null);
 }
 
@@ -126,43 +141,35 @@ class ENGINE
 
     private static $class_list = array();
     private static $class_alias = array();
-    private static $SUBDIR='';
+    private static $SUBDIR = '';
 
     /*  --- point::ENGINE_header --- */
 
     private static $events = array();
 
 
-
     static private $options = array(); // пары: имя-значение
     static private $transport = array(); // пары: имя - механизм сохранения
     static public $default_transport = '';
     static private $transports = array(); // строка -> объект
-   // static private $class_alias = false;
-
+    // static private $class_alias = false;
 
 
     static public $session_started = false;
 
 
-
     static $cookie_name = 'testing';
 
 
-
-
     static private $interface = array();
-
 
 
     /** @var xDatabaseLapsi */
     static private $db = null;
 
 
-
     static $url_par = null;
     static $url_path = null;
-
 
 
     static $start_time;
@@ -310,7 +317,7 @@ class ENGINE
             $dir = substr($name, 0, $pos + 1);
             $name = substr($name, $pos + 1);
         }
-        self::$SUBDIR=$dir;
+        self::$SUBDIR = $dir;
         if (!isset(self::$class_list[$name])) {
             $class = self::getAliace($name);
             if (class_exists($class)) {
@@ -409,8 +416,8 @@ class ENGINE
             $cache[$name] = new $name();
         }
 //debug($name,$par);
-        if(!is_string($name)){
-            self::debug('wtf?','~count|15');
+        if (!is_string($name)) {
+            self::debug('wtf?', '~count|15');
         }
         $x = $cache[$name]->$method($par);
         return $x;
@@ -466,9 +473,9 @@ class ENGINE
                     $key = array_search($handler, self::$events[$ev]);
                     if ($key !== false)
                         unset(self::$events[$ev][$key]);
-            }
+                }
         }
-        }
+    }
 
     /**
      * вызвать все обработчики события
@@ -483,9 +490,8 @@ class ENGINE
             if (isset(self::$events[$ev]))
                 foreach (self::$events[$ev] as &$handle) {
                     self::exec($handle, array($event, &$args));
+                }
     }
-    }
-
 
 
     /**
@@ -518,8 +524,8 @@ class ENGINE
     {
         if (is_array($name))
             $transport = $value;
-        if($name=='engine.aliaces')
-            self::$class_alias=false;
+        if ($name == 'engine.aliaces')
+            self::$class_alias = false;
 
         if (!empty($transport) && is_string($transport) && !isset(self::$transports[$transport])) {
             self::read_options($transport);
@@ -556,15 +562,15 @@ class ENGINE
                 ) {
                     self::$options[$name] = $value;
                 } else {
-                    array_merge_deep(self::$options[$name], $value);
+                    UTILS::array_merge_deep(self::$options[$name], $value);
                 }
                 return true;
-            } else if (array_key_exists($name,self::$options))
+            } else if (array_key_exists($name, self::$options))
                 return self::$options[$name];
             else
                 return null;
         }
-        if(is_string($transport))
+        if (is_string($transport))
             class_exists($transport);
         if (!is_null($value)) {
             call_user_func(array($transport, 'set'), $name, $value);
@@ -585,15 +591,15 @@ class ENGINE
         ) {
             // отделяем имя от параметра
             $x = explode('|', $transport . '|');
-            $y=explode('~',$x[0].'~');
-                self::$transports[$transport] = 'engine_options_' . $y[0];
-            foreach(array('','engine_options_','\\'.__NAMESPACE__.'\\engine_options_') as $pref) {
+            $y = explode('~', $x[0] . '~');
+            self::$transports[$transport] = 'engine_options_' . $y[0];
+            foreach (array('', 'engine_options_', '\\' . __NAMESPACE__ . '\\engine_options_') as $pref) {
                 if (is_callable(array($pref . $y[0], 'init'))) {
                     self::$transports[$transport] =
                         call_user_func(array($pref . $y[0], 'init'), $y[1], $x[1]);
                     break;
-                } else if(class_exists($pref . $y[0])){
-                    self::$transports[$transport] = $pref .$y[0];
+                } else if (class_exists($pref . $y[0])) {
+                    self::$transports[$transport] = $pref . $y[0];
                     break;
                 }
             }
@@ -619,37 +625,37 @@ class ENGINE
     }
 
 
-
-    static function start_session($log=true)
+    static function start_session($log = true)
     {
         if (!self::$session_started) {
             $session_name = self::option('engine.sessionname');
             if (!empty($session_name)) {
                 session_name($session_name);
             }
-            session_set_cookie_params ( ENGINE::option('engine.session_lifetime',600),ENGINE::option('engine.session_path','/'),ENGINE::option('engine.session_domain',null));
+            session_set_cookie_params(ENGINE::option('engine.session_lifetime', 600), ENGINE::option('engine.session_path', '/'), ENGINE::option('engine.session_domain', null));
             session_start();
-            setcookie(session_name(),session_id(),time()+ENGINE::option('engine.session_lifetime',600),ENGINE::option('engine.session_path','/'),ENGINE::option('engine.session_domain',null));
-            if($log){
-            $log = array();
-            foreach (array('REMOTE_ADDR', 'X-Forwarded-For', 'X-Real-IP') as $name) {
-                if (isset($_SERVER[$name])) {
-                    $log[$_SERVER[$name]] = $name;
-                }
+            setcookie(session_name(), session_id(), time() + ENGINE::option('engine.session_lifetime', 600), ENGINE::option('engine.session_path', '/'), ENGINE::option('engine.session_domain', null));
+
+            /*
+        if($log){
+        $log = array();
+        foreach (array('REMOTE_ADDR', 'X-Forwarded-For', 'X-Real-IP') as $name) {
+            if (isset($_SERVER[$name])) {
+                $log[$_SERVER[$name]] = $name;
             }
-                /*
-            ENGINE::log(
-                'Старт сессии.
+        }
+            /*
+        ENGIN 'Старт сессии.
 IP:{{IP}}
 REF:"{{HTTP_REFERER}}"
 UA:"{{HTTP_USER_AGENT}}"', array('type' => 'session',
-                    '{{IP}}' => implode(',', array_keys($log)),
-                    '{{HTTP_REFERER}}' => ENGINE::_($_SERVER['HTTP_REFERER'], '-'),
-                    '{{HTTP_USER_AGENT}}' => ENGINE::_($_SERVER['HTTP_USER_AGENT'], '-')
-                )
-            );
-                */
-            }
+                '{{IP}}' => implode(',', array_keys($log)),
+                '{{HTTP_REFERER}}' => ENGINE::_($_SERVER['HTTP_REFERER'], '-'),
+                '{{HTTP_USER_AGENT}}' => ENGINE::_($_SERVER['HTTP_USER_AGENT'], '-')
+            )
+        );
+
+            }*/
             self::$session_started = true;
         }
     }
@@ -699,15 +705,15 @@ UA:"{{HTTP_USER_AGENT}}"', array('type' => 'session',
         if (is_array($options)) {
             ENGINE::set_option($options);
         } else if (is_readable($options)) {
-            ENGINE::set_option(include ($options));
+            ENGINE::set_option(include($options));
         } else {
             ENGINE::error('Init: parameter failed');
         }
         //////////////////////////////////////////////////////////////////////////////////
 // register all default interfaces
         if (method_exists('ENGINE', 'register_interface'))
-        foreach (ENGINE::option('engine.interfaces', array()) as $k => $v)
-            ENGINE::register_interface($k, $v);
+            foreach (ENGINE::option('engine.interfaces', array()) as $k => $v)
+                ENGINE::register_interface($k, $v);
 
 //////////////////////////////////////////////////////////////////////////////////
 // include all classes from `engine.include_files`
@@ -720,15 +726,14 @@ UA:"{{HTTP_USER_AGENT}}"', array('type' => 'session',
             ENGINE::set_option($k, null, $v);
 
         if (method_exists('ENGINE', 'register_event_handler'))
-        foreach (ENGINE::option('engine.event_handler', array()) as $k => $v) {
-            if (is_array($v) && count($v) > 0) {
-                foreach ($v as $vv) {
-                    ENGINE::register_event_handler($k, $vv);
+            foreach (ENGINE::option('engine.event_handler', array()) as $k => $v) {
+                if (is_array($v) && count($v) > 0) {
+                    foreach ($v as $vv) {
+                        ENGINE::register_event_handler($k, $vv);
+                    }
                 }
             }
-        }
     }
-
 
 
     /**
@@ -737,60 +742,63 @@ UA:"{{HTTP_USER_AGENT}}"', array('type' => 'session',
      * @param int $count - количество позиций
      * @return string
      */
-    static function backtrace($opt=array(),$count=1){
-        $x=debug_backtrace();
-        if(empty($opt)) $opt=array('function'=>'debug');
-        if(isset($opt['count'])) $count=$opt['count'];
-        $result=array();
-        while(count($x)>0){
-            foreach(array('function','class') as $xx) {
-                if(isset($opt[$xx]) && isset($x[0][$xx]) && (0===strpos($x[0][$xx],$opt[$xx]))){
+    static function backtrace($opt = array(), $count = 1)
+    {
+        $x = debug_backtrace();
+        if (empty($opt)) $opt = array('function' => 'debug');
+        if (isset($opt['count'])) $count = $opt['count'];
+        $result = array();
+        while (count($x) > 0) {
+            foreach (array('function', 'class') as $xx) {
+                if (isset($opt[$xx]) && isset($x[0][$xx]) && (0 === strpos($x[0][$xx], $opt[$xx]))) {
                     //array_shift($x);
                     break 2;
-                }
-                elseif(isset($opt['!'.$xx]) && isset($x[0][$xx]) && (false===strpos($x[0][$xx],$opt['!'.$xx])))
+                } elseif (isset($opt['!' . $xx]) && isset($x[0][$xx]) && (false === strpos($x[0][$xx], $opt['!' . $xx])))
                     break 2;
             }
             array_shift($x);
         }
-        if(empty($x)){
-            $x=debug_backtrace();$count=max(3,$count);array_shift($x);
-        } else if(!empty($opt['shift'])){
+        if (empty($x)) {
+            $x = debug_backtrace();
+            $count = max(3, $count);
+            array_shift($x);
+        } else if (!empty($opt['shift'])) {
             array_shift($x);
         }
-        while($count-- && (count($x)>0)) {
-            $xx=array();
-            $y=array_shift($x);
-            foreach(array('function'=>'func','class'=>'cls','file'=>'file','line'=>'line') as $k=>$v) {
-                if(isset($y[$k]))
-                    if($k=='file')
-                        $xx[]=$v.':'.str_replace($_SERVER['DOCUMENT_ROOT'],'',$y[$k]);
+        while ($count-- && (count($x) > 0)) {
+            $xx = array();
+            $y = array_shift($x);
+            foreach (array('function' => 'func', 'class' => 'cls', 'file' => 'file', 'line' => 'line') as $k => $v) {
+                if (isset($y[$k]))
+                    if ($k == 'file')
+                        $xx[] = $v . ':' . str_replace($_SERVER['DOCUMENT_ROOT'], '', $y[$k]);
                     else
-                        $xx[]=$v.':'.$y[$k];
+                        $xx[] = $v . ':' . $y[$k];
             }
-            if(!empty($xx))
-                $result[]= implode(',',$xx);
+            if (!empty($xx))
+                $result[] = implode(',', $xx);
         }
-        return implode("\n|",$result);
+        return implode("\n|", $result);
     }
 
     static function debug()
     {
-        $backtrace_options=array('function'=>'debug');$backtrace_count=1;
-        $na=func_num_args();
-        $out='';
-        for ($i=0; $i<$na;$i++){
-            $msg=func_get_arg($i);
+        $backtrace_options = array('function' => 'debug');
+        $backtrace_count = 1;
+        $na = func_num_args();
+        $out = '';
+        for ($i = 0; $i < $na; $i++) {
+            $msg = func_get_arg($i);
 
-            if(is_string($msg) && strlen($msg)>1 && $msg{0}=='~'){
-                $x=explode('|',substr($msg,1).'||');
-                $backtrace_options[$x[0]]=$x[1];
+            if (is_string($msg) && strlen($msg) > 1 && $msg{0} == '~') {
+                $x = explode('|', substr($msg, 1) . '||');
+                $backtrace_options[$x[0]] = $x[1];
             } else {
-                $out.=self::varlog($msg)."\r\n";
+                $out .= self::varlog($msg) . "\r\n";
             }
         }
-        if(empty($backtrace_options))$backtrace_count=4;
-        echo '<!--xxx-debug-'.self::backtrace($backtrace_options,$backtrace_count).' '.str_replace('-->','--&gt;',trim(substr($out,0,16000))).'-->';
+        if (empty($backtrace_options)) $backtrace_count = 4;
+        echo '<!--xxx-debug-' . self::backtrace($backtrace_options, $backtrace_count) . ' ' . str_replace('-->', '--&gt;', trim(substr($out, 0, 16000))) . '-->';
     }
 
     /**
@@ -807,74 +815,75 @@ UA:"{{HTTP_USER_AGENT}}"', array('type' => 'session',
      * http://us2.php.net/manual/en/function.var-dump.php#76072
      */
     static function varlog(
-        &$varInput, $var_name='', $reference='', $method = '=', $sub = false
-    ) {
+        &$varInput, $var_name = '', $reference = '', $method = '=', $sub = false
+    )
+    {
 
-        static $output ;
-        static $depth ;
+        static $output;
+        static $depth;
 
-        if ( $sub == false ) {
-            $output = '' ;
-            $depth = 0 ;
-            $reference = $var_name ;
-            $var = serialize( $varInput ) ;
-            $var = unserialize( $var ) ;
+        if ($sub == false) {
+            $output = '';
+            $depth = 0;
+            $reference = $var_name;
+            $var = serialize($varInput);
+            $var = unserialize($var);
         } else {
-            ++$depth ;
-            $var =& $varInput ;
+            ++$depth;
+            $var =& $varInput;
         }
 
         // constants
-        $nl = "\n" ;
+        $nl = "\n";
         $block = 'a_big_recursion_protection_block';
 
-        $c = $depth ;
-        $indent = '' ;
-        while( $c -- > 0 ) {
-            $indent .= '|  ' ;
+        $c = $depth;
+        $indent = '';
+        while ($c-- > 0) {
+            $indent .= '|  ';
         }
-        if($depth>5) return '...';
+        if ($depth > 5) return '...';
         // if this has been parsed before
-        if ( is_array($var) && isset($var[$block])) {
+        if (is_array($var) && isset($var[$block])) {
 
-            $real =& $var[ $block ] ;
-            $name =& $var[ 'name' ] ;
-            $type = gettype( $real ) ;
-            $output .= $indent.$var_name.' '.$method.'& '.($type=='array'?'Array':get_class($real)).' '.$name.$nl;
+            $real =& $var[$block];
+            $name =& $var['name'];
+            $type = gettype($real);
+            $output .= $indent . $var_name . ' ' . $method . '& ' . ($type == 'array' ? 'Array' : get_class($real)) . ' ' . $name . $nl;
 
             // havent parsed this before
         } else {
 
             // insert recursion blocker
-            $var = Array( $block => $var, 'name' => $reference );
-            $theVar =& $var[ $block ] ;
+            $var = array($block => $var, 'name' => $reference);
+            $theVar =& $var[$block];
 
             // print it out
-            $type = gettype( $theVar ) ;
-            switch( $type ) {
+            $type = gettype($theVar);
+            switch ($type) {
 
                 case 'array' :
-                    $output .= $indent . $var_name . ' '.$method.' Array ('.$nl;
-                    $keys=array_keys($theVar);
-                    foreach($keys as $name) {
-                        $value=&$theVar[$name];
-                        self::varlog($value, $name, $reference.'["'.$name.'"]', '=', true);
+                    $output .= $indent . $var_name . ' ' . $method . ' Array (' . $nl;
+                    $keys = array_keys($theVar);
+                    foreach ($keys as $name) {
+                        $value =& $theVar[$name];
+                        self::varlog($value, $name, $reference . '["' . $name . '"]', '=', true);
                     }
-                    $output .= $indent.')'.$nl;
-                    break ;
+                    $output .= $indent . ')' . $nl;
+                    break;
 
                 case 'object' :
                     $output .= $indent;
-                    if(!empty($var_name)){
-                        $output .= $var_name.' = ';
+                    if (!empty($var_name)) {
+                        $output .= $var_name . ' = ';
                     }
                     //$output .= '{'.var_export ($theVar,true).$indent.'}'.$nl;
                     //break;
                     //if( !class_exists('ReflectionClass')){
-                        $output .= get_class($theVar).' {'.$nl;
-                        foreach((array)$theVar as $name=>$value) {
-                            self::varlog($value, $name, $reference.'->'.$name, '->', true);
-                        }
+                    $output .= get_class($theVar) . ' {' . $nl;
+                    foreach ((array)$theVar as $name => $value) {
+                        self::varlog($value, $name, $reference . '->' . $name, '->', true);
+                    }
                     /*} else {
                         $reflect = new ReflectionClass($theVar);
                         $output .= $reflect->getName().' {'.$nl;
@@ -886,20 +895,20 @@ UA:"{{HTTP_USER_AGENT}}"', array('type' => 'session',
                             print $prop->getName() . "\n";
                         }
                     }*/
-                    $output .= $indent.'}'.$nl;
-                    break ;
+                    $output .= $indent . '}' . $nl;
+                    break;
 
                 case 'string' :
-                    if($var_name!='' && strlen($theVar)>1000){
-                        $output .= $indent . $var_name . ' '.$method.' "'.mb_substr($theVar,0,500,"UTF-8").'..."'.$nl;
+                    if ($var_name != '' && strlen($theVar) > 1000) {
+                        $output .= $indent . $var_name . ' ' . $method . ' "' . mb_substr($theVar, 0, 500, "UTF-8") . '..."' . $nl;
                     } else {
-                        $output .= $indent . $var_name . ' '.$method.' "'.$theVar.'"'.$nl;
+                        $output .= $indent . $var_name . ' ' . $method . ' "' . $theVar . '"' . $nl;
                     }
-                    break ;
+                    break;
 
                 default :
-                    $output .= $indent . $var_name . ' '.$method.' ('.$type.') '.$theVar.$nl;
-                    break ;
+                    $output .= $indent . $var_name . ' ' . $method . ' (' . $type . ') ' . $theVar . $nl;
+                    break;
 
             }
 
@@ -907,14 +916,12 @@ UA:"{{HTTP_USER_AGENT}}"', array('type' => 'session',
 
         }
 
-        -- $depth ;
+        --$depth;
 
-        if( $sub == false )
-            return $output ;
+        if ($sub == false)
+            return $output;
         return '';
     }
-
-
 
 
     /**
@@ -924,9 +931,7 @@ UA:"{{HTTP_USER_AGENT}}"', array('type' => 'session',
      */
     static function hasflag($flag)
     {
-        return isset($_COOKIE) &&
-        isset($_COOKIE[self::$cookie_name]) &&
-        preg_match('/\b' . preg_quote($flag) . '\b/', $_COOKIE[self::$cookie_name]);
+        return preg_match('/\b' . preg_quote($flag) . '\b/', self::option(self::$cookie_name, ''));
     }
 
     /**
@@ -937,30 +942,34 @@ UA:"{{HTTP_USER_AGENT}}"', array('type' => 'session',
     static function initflags()
     {
         if (isset($_GET) && isset($_GET[self::$cookie_name]) && !preg_match('/[^\w,\+\-\.\s]/', $_GET[self::$cookie_name])) {
-            if(preg_match('/[\-\s\+]/',$_GET[self::$cookie_name])){
-                if(isset($_COOKIE[self::$cookie_name])){
-                    $cookie=preg_split('/[,]+/',$_COOKIE[self::$cookie_name]);
+            if (preg_match('/[\-\s\+]/', $_GET[self::$cookie_name])) {
+                if (isset($_COOKIE[self::$cookie_name])) {
+                    $cookie = preg_split('/[,]+/', $_COOKIE[self::$cookie_name]);
                 } else {
-                    $cookie=array();
+                    $cookie = array();
                 }
-                if(preg_match_all('/([\s\-\+])([\w]*)/',$_GET[self::$cookie_name],$m))
-                foreach($m[0] as $k=>$v){
-                    if($m[1][$k]!='-') $cookie[]=$m[2][$k];
-                    else {
-                        $cookie=array_diff($cookie,array($m[2][$k])) ;
+                if (preg_match_all('/([\s\-\+])([\w]*)/', $_GET[self::$cookie_name], $m))
+                    foreach ($m[0] as $k => $v) {
+                        if ($m[1][$k] != '-') $cookie[] = $m[2][$k];
+                        else {
+                            $cookie = array_diff($cookie, array($m[2][$k]));
+                        }
                     }
-                }
-                $cookie=implode(',',array_unique($cookie));
+                $cookie = implode(',', array_unique($cookie));
             } else {
-                $cookie=trim($_GET[self::$cookie_name]);
+                $cookie = trim($_GET[self::$cookie_name]);
             }
-            if (!empty($cookie))
+            if (!empty($cookie)) {
+                self::set_option(self::$cookie_name, '');
                 setcookie(self::$cookie_name, $cookie);
-            else
+            } else {
+                self::set_option(self::$cookie_name, '');
                 setcookie(self::$cookie_name, "", time() - 3600);
-            return true;
+            }
         }
-        return false;
+        if (isset($_COOKIE[self::$cookie_name])) {
+            self::set_option(self::$cookie_name, $_COOKIE[self::$cookie_name]);
+        }
     }
 
 
@@ -1001,19 +1010,17 @@ UA:"{{HTTP_USER_AGENT}}"', array('type' => 'session',
 
     static public function __callStatic($method, $args)
     {
-        if(isset(self::$interface[$method])) {
-            return ENGINE::exec(self::$interface[$method], $args);
+        if (isset(self::$interface[$method])) {
+            return self::exec(self::$interface[$method], $args);
         } else {
-            $class=ENGINE::option('interface.'.$method, false);
-            if(false!==$class && is_callable(array($class,$method))) {
-                self::register_interface($method, array($class,$method));
-                return ENGINE::exec(self::$interface[$method], $args);
+            $class = self::option('interface.' . $method, false);
+            if (false !== $class && is_callable(array($class, $method))) {
+                self::register_interface($method, array($class, $method));
+                return self::exec(self::$interface[$method], $args);
             }
             return null;
         }
     }
-
-
 
 
     /**
@@ -1033,15 +1040,21 @@ UA:"{{HTTP_USER_AGENT}}"', array('type' => 'session',
     }
 
 
-
     /**
      * организация массива - регулярка, имена захваченных
+     * Выставляет options - ajax, Class, method
      * @var array
      *
      */
     static function route($rules = null)
     {
-
+        $headers = ENGINE::headers();
+        if ((isset($headers['X-Requested-With']) && $headers['X-Requested-With'] == 'XMLHttpRequest')
+            || isset($_GET['ajax'])
+            || (isset($_POST) && isset($_POST['ajax']))
+        ) {
+            self::set_option('ajax', 'json');
+        }
         /** @var array $rules */
         if (empty($rules)) {
             /**
@@ -1069,20 +1082,24 @@ UA:"{{HTTP_USER_AGENT}}"', array('type' => 'session',
             array('class' => 'Main', 'method' => 'do_404')
         );
 
-        foreach ($rules as $rule) if(!empty($rule)){
+        foreach ($rules as $rule) if (!empty($rule)) {
             if (empty($rule[0]) || preg_match($rule[0], $query_string, $m)) {
-                foreach ($rule[1] as $k => $v) {
-                    if (is_int($k)) {
-                        if (!empty($m[$k])) {
-                            if ($v == 'method') {
-                                $m[$k] = 'do_' . $m[$k];
+                if (is_callable($rule[1])) {
+                    if (true === call_user_func($rule[1], $m))
+                        return;
+                } else
+                    foreach ($rule[1] as $k => $v) {
+                        if (is_int($k)) {
+                            if (!empty($m[$k])) {
+                                if ($v == 'method') {
+                                    $m[$k] = 'do_' . $m[$k];
+                                }
+                                ENGINE::set_option($v, $m[$k]);
                             }
-                            ENGINE::set_option($v, $m[$k]);
+                        } else {
+                            ENGINE::set_option($k, $v);
                         }
-                    } else {
-                        ENGINE::set_option($k, $v);
                     }
-                }
                 break;
             }
         }
@@ -1113,7 +1130,7 @@ UA:"{{HTTP_USER_AGENT}}"', array('type' => 'session',
         }
         foreach ($act as $x) {
             $action = $x[0];
-            $param = self::_($x[1],'');
+            $param = self::_($x[1], '');
             switch ($action) {
                 case '+':
                     if (empty($param))
@@ -1128,42 +1145,40 @@ UA:"{{HTTP_USER_AGENT}}"', array('type' => 'session',
                     }
                     break;
                 case 'file2url':
-                    if(empty($par)){
-                        $query='';
+                    if (empty($par)) {
+                        $query = '';
                     } else {
-                        $query=$par;
+                        $query = $par;
                     }
                     if (!empty($query))
                         $query = '?' . $query;
-                    if(!defined('INDEX_DIR')) {
-                        if(isset($_SERVER['SCRIPT_FILENAME']) && isset($_SERVER['SCRIPT_NAME'])){
-                            $root=str_replace($_SERVER['SCRIPT_NAME'],'',str_replace('\\', '/', $_SERVER['SCRIPT_FILENAME']));
+                    if (!defined('INDEX_DIR')) {
+                        if (isset($_SERVER['SCRIPT_FILENAME']) && isset($_SERVER['SCRIPT_NAME'])) {
+                            $root = str_replace($_SERVER['SCRIPT_NAME'], '', str_replace('\\', '/', $_SERVER['SCRIPT_FILENAME']));
                         } else {
-                            $root=str_replace('\\', '/', $_SERVER['DOCUMENT_ROOT']);
+                            $root = str_replace('\\', '/', $_SERVER['DOCUMENT_ROOT']);
                         }
                         $z = str_replace($root, '', $z);
-                    }
-                    else
-                        $z=str_replace(str_replace('\\', '/',INDEX_DIR),'',$z);
+                    } else
+                        $z = str_replace(str_replace('\\', '/', INDEX_DIR), '', $z);
                     return $z . $query;
                 case 'root':
-                    self::$url_path=ENGINE::option('page.rootsite', self::$url_path).$z;
+                    self::$url_path = ENGINE::option('page.rootsite', self::$url_path) . $z;
                     break;
                 case 'replace':
                     self::$url_par = $param;
                     break;
             }
         }
-        if(!empty(self::$url_par))
+        if (!empty(self::$url_par))
             $query = http_build_query(self::$url_par);
         else
-            $query='';
+            $query = '';
         if (!empty($query))
             $query = '?' . $query;
         return self::$url_path . $query;
 
     }
-
 
 
     static public function _report()
@@ -1189,7 +1204,6 @@ UA:"{{HTTP_USER_AGENT}}"', array('type' => 'session',
     }
 
 
-
     static function relocate($link)
     {
         if (ENGINE::hasflag('norelock') || ENGINE::option('debug', false)) {
@@ -1200,17 +1214,20 @@ UA:"{{HTTP_USER_AGENT}}"', array('type' => 'session',
         exit;
     }
 
-    static function  ajax_action()
+    static function ajax_action()
     {
         ENGINE::set_option('ajax', true);
-        header('Content-type: application/json; charset=UTF-8');
+        if ('iframe' != self::option('ajax'))
+            header('Content-type: text/html; charset=UTF-8');
+        else
+            header('Content-type: application/json; charset=UTF-8');
         if ('POST' == $_SERVER['REQUEST_METHOD'] &&
-            (array_key_exists('handler', $_POST) || !ENGINE::option('skip_post',false))
+            (array_key_exists('handler', $_POST) || !ENGINE::option('skip_post', false))
         ) {
             if (array_key_exists('handler', $_POST)) {
                 preg_match(
                     '/^([^:]*)::([^:]+)(?::([^:]+))?(?::([^:]+))?(?::([^:]+))?$/',
-                    str_replace('%3A',':',$_POST['handler']), $m
+                    str_replace('%3A', ':', $_POST['handler']), $m
                 );
                 if (empty($m[1])) {
                     $m[1] = 'Main';
@@ -1232,7 +1249,7 @@ UA:"{{HTTP_USER_AGENT}}"', array('type' => 'session',
         } else {
             /*  --- point::BEFORE_GETDATA --- */
 
-        ENGINE::trigger_event('BEFORE_GETDATA');
+            ENGINE::trigger_event('BEFORE_GETDATA');
 
             $data = self::getData();
         }
@@ -1248,18 +1265,48 @@ UA:"{{HTTP_USER_AGENT}}"', array('type' => 'session',
 
     }
 
-    static function _finish_ajax($result=array()){
-        $data = ENGINE::slice_option('ajax.');
+    static function printgzip($contents)
+    {
+        //echo utf8_encode(json_encode($result));
+        $HTTP_ACCEPT_ENCODING = $_SERVER["HTTP_ACCEPT_ENCODING"];
+        if (headers_sent())
+            $encoding = false;
+        else if (strpos($HTTP_ACCEPT_ENCODING, 'x-gzip') !== false)
+            $encoding = 'x-gzip';
+        else if (strpos($HTTP_ACCEPT_ENCODING, 'gzip') !== false)
+            $encoding = 'gzip';
+        else
+            $encoding = false;
+
+        if ($encoding) {
+            $_temp1 = strlen($contents);
+            if ($_temp1 < 2048)    // no need to waste resources in compressing very little data
+                print($contents);
+            else {
+                header('Content-Encoding: ' . $encoding);
+                print("\x1f\x8b\x08\x00\x00\x00\x00\x00");
+                $contents = gzcompress($contents, 9);
+                $contents = substr($contents, 0, $_temp1);
+                print($contents);
+            }
+        } else
+            print $contents;
+
+    }
+
+    static function _finish_ajax($result = array())
+    {
+        $data = self::slice_option('ajax.');
         if (!empty($data)) {
             $result = array_merge($result, $data);
         }
-        $error = ENGINE::option('page.error');
+        $error = self::option('page.error');
         if (!empty($error)) {
-            if(!isset($result['error']))$result['error']='';
+            if (!isset($result['error'])) $result['error'] = '';
             $result['error'] .= utf8_encode($error);
         }
         $x = ob_get_contents();
-        $x .= trim(ENGINE::option('page.debug'));
+        $x .= trim(self::option('page.debug'));
         if (!empty($x)) {
             $result['debug'] = utf8_encode($x);
         }
@@ -1270,42 +1317,16 @@ UA:"{{HTTP_USER_AGENT}}"', array('type' => 'session',
 
         // $q=ENGINE::db()->exec('Database',get_request_count
         ob_start();
-        ENGINE::_report();
+        self::_report();
         $result['stat'] = ob_get_contents();
         ob_end_clean();
-        ENGINE::set_option('noreport',1);
+        self::set_option('noreport', 1);
         //echo json_encode_cyr($result);
         $contents = utf8_encode(json_encode($result));
-        if(isset($_POST['ajax']) && $_POST['ajax']=='iframe'){
-            $contents= '<script type="text/javascript"> top.ajax_handle('.$contents.')</script>';
+        if ('iframe' == self::option('ajax')) {
+            $contents = '<script type="text/javascript"> top.' . self::option('iframe_callback', 'ajax_handle') . '(' . $contents . ')</script>';
         }
-        //echo utf8_encode(json_encode($result));
-        $HTTP_ACCEPT_ENCODING = $_SERVER["HTTP_ACCEPT_ENCODING"];
-        if( headers_sent() )
-            $encoding = false;
-        else if( strpos($HTTP_ACCEPT_ENCODING, 'x-gzip') !== false )
-            $encoding = 'x-gzip';
-        else if( strpos($HTTP_ACCEPT_ENCODING,'gzip') !== false )
-            $encoding = 'gzip';
-        else
-            $encoding = false;
-
-        if( $encoding )
-        {
-            $_temp1 = strlen($contents);
-            if ($_temp1 < 2048)    // no need to waste resources in compressing very little data
-                print($contents);
-            else
-            {
-                header('Content-Encoding: '.$encoding);
-                print("\x1f\x8b\x08\x00\x00\x00\x00\x00");
-                $contents = gzcompress($contents, 9);
-                $contents = substr($contents, 0, $_temp1);
-                print($contents);
-            }
-        }
-        else
-            echo $contents;
+        self::printgzip($contents);
 
     }
 
@@ -1313,25 +1334,26 @@ UA:"{{HTTP_USER_AGENT}}"', array('type' => 'session',
     {
         $x = array(ENGINE::option('class', 'Main'), ENGINE::option('method', 'do_Default'));
         //if(class_exists())
-        if(!ENGINE::getObj($x[0])){
-            $x=array('Main','do_404');
+        if (!ENGINE::getObj($x[0])) {
+            $x = array('Main', 'do_404');
         }
         return ENGINE::exec($x);
     }
 
-    static function headers(){
-        static $headers=array();
+    static function headers()
+    {
+        static $headers = array();
         if (empty($headers)) {
             if (is_callable('apache_request_headers')) {
                 $headers = apache_request_headers();
             } else {
-                $headers=array();
-                foreach($_SERVER as $key=>$value) {
-                    if (substr($key,0,5)=="HTTP_") {
-                        $key=str_replace(" ","-",ucwords(strtolower(str_replace("_"," ",substr($key,5)))));
-                        $headers[$key]=$value;
-                    }else{
-                        $headers[$key]=$value;
+                $headers = array();
+                foreach ($_SERVER as $key => $value) {
+                    if (substr($key, 0, 5) == "HTTP_") {
+                        $key = str_replace(" ", "-", ucwords(strtolower(str_replace("_", " ", substr($key, 5)))));
+                        $headers[$key] = $value;
+                    } else {
+                        $headers[$key] = $value;
                     }
                 }
             }
@@ -1339,77 +1361,76 @@ UA:"{{HTTP_USER_AGENT}}"', array('type' => 'session',
         return $headers;
     }
 
-static function action()
+    static function action()
     {
         try {
-        ob_start();
-        $error = ENGINE::option('session.page.error');
-        if (!empty($error)) {
-            ENGINE::set_option('session.page.error', '');
-            ENGINE::error($error);
-        }
-            $headers=ENGINE::headers();
-
-            if ((isset($headers['X-Requested-With']) && $headers['X-Requested-With']=='XMLHttpRequest')
-                || isset($_GET['ajax'])
-                || (isset($_POST) && isset($_POST['ajax']))) {
-            self::ajax_action();
-            return;
-        }
-        header('Content-Type:text/html; charset=' . ENGINE::option('page.code', 'UTF-8'));
-        header('X-UA-Compatible: IE=edge,chrome=1');
-
-        if(isset($_SESSION['SAVE_POST'])){
-            if('POST' != $_SERVER['REQUEST_METHOD']) {
-                $_SERVER['REQUEST_METHOD']='POST';
-                $_POST=$_SESSION['SAVE_POST'];
-                $_FILES=$_SESSION['SAVE_FILES'];
+            ob_start();
+            $error = ENGINE::option('session.page.error');
+            if (!empty($error)) {
+                ENGINE::set_option('session.page.error', '');
+                ENGINE::error($error);
             }
-            unset($_SESSION['SAVE_POST'],$_SESSION['SAVE_FILES']);
-        }
+
+            if ('' != self::option('ajax')) {
+
+                self::ajax_action();
+                return;
+            }
+            header('Content-Type:text/html; charset=' . ENGINE::option('page.code', 'UTF-8'));
+            header('X-UA-Compatible: IE=edge,chrome=1');
+
+            if (isset($_SESSION['SAVE_POST'])) {
+                if ('POST' != $_SERVER['REQUEST_METHOD']) {
+                    $_SERVER['REQUEST_METHOD'] = 'POST';
+                    $_POST = $_SESSION['SAVE_POST'];
+                    $_FILES = $_SESSION['SAVE_FILES'];
+                }
+                unset($_SESSION['SAVE_POST'], $_SESSION['SAVE_FILES']);
+            }
 
             if ('POST' == self::_($_SERVER['REQUEST_METHOD']) &&
-                (array_key_exists('handler', $_POST) || ENGINE::option('skip_post',false))
+                (array_key_exists('handler', $_POST) || ENGINE::option('skip_post', false))
             ) {
-            if (array_key_exists('handler', $_POST)) {
-                preg_match('/^([^:]*)::([^:]+)(?::([^:]+))?(?::([^:]+))?(?::([^:]+))?$/'
-                    , $_POST['handler'], $m);
-                if (empty($m[1])) $m[1] = 'Main';
-                if (empty($m[2])) ENGINE::error('Wrong handler.');
-                for ($i = 3; $i < 6; $i++)
-                    if (!array_key_exists($i, $m)) $m[$i] = '';
-                $act = array($m[1], 'do_' . $m[2]);
-                ENGINE::exec($act, array($m[3], $m[4], $m[5]));
-            } else
-                ENGINE::error('Wrong usage of POST method.');
-            $error = ENGINE::option('page.error');
-            if (!empty($error)) {
-                ENGINE::set_option('session.page.error', $error);
+                if (array_key_exists('handler', $_POST)) {
+                    preg_match('/^([^:]*)::([^:]+)(?::([^:]+))?(?::([^:]+))?(?::([^:]+))?$/'
+                        , $_POST['handler'], $m);
+                    if (empty($m[1])) $m[1] = 'Main';
+                    if (empty($m[2])) ENGINE::error('Wrong handler.');
+                    for ($i = 3; $i < 6; $i++)
+                        if (!array_key_exists($i, $m)) $m[$i] = '';
+                    $act = array($m[1], 'do_' . $m[2]);
+                    ENGINE::exec($act, array($m[3], $m[4], $m[5]));
+                } else
+                    ENGINE::error('Wrong usage of POST method.');
+                $error = ENGINE::option('page.error');
+                if (!empty($error)) {
+                    ENGINE::set_option('session.page.error', $error);
+                }
+                ENGINE::relocate(ENGINE::link());
             }
-            ENGINE::relocate(ENGINE::link());
-        }
-        /*  --- point::BEFORE_GETDATA --- */
+            /*  --- point::BEFORE_GETDATA --- */
 
             ENGINE::trigger_event('BEFORE_GETDATA');
 
-        $data = self::getData();
+            $data = self::getData();
 
-        $x = ENGINE::template(
-            ENGINE::option('page_tpl', 'tpl_main')
-            , ENGINE::option('page_macro', '_')
-            , array_merge(array('data' => $data), ENGINE::slice_option('page.'))
-        );
-        if (!trim($x)) {
-            ENGINE::error($x = ENGINE::_t('template `{{tpl}}::{{macro}}` not defined',
-                array('{{tpl}}' => ENGINE::option('page_tpl', 'tpl_main'),
-                    '{{macro}}' => ENGINE::option('page_macro', '_'))));
-            $x = '<html><head><title>Oops</title></head><body>' . $x . '</body></html>';
-        }
-        echo $x;
+            $x = ENGINE::template(
+                ENGINE::option('page_tpl', 'tpl_main')
+                , ENGINE::option('page_macro', '_')
+                , array_merge(array('data' => $data), ENGINE::slice_option('page.'))
+            );
+            if (!trim($x)) {
+                ENGINE::error($x = ENGINE::_t('template `{{tpl}}::{{macro}}` not defined',
+                    array('{{tpl}}' => ENGINE::option('page_tpl', 'tpl_main'),
+                        '{{macro}}' => ENGINE::option('page_macro', '_'))));
+                $x = '<html><head><title>Oops</title></head><body>' . $x . '</body></html>';
+            }
+            echo $x;
         } catch (Exception $e) {
             ENGINE::error($x = ENGINE::_t('Exception pending `{{msg}}`',
                 array('{{msg}}' => $e->getMessage())));
-            $x = '<html><head><title>Oops</title></head><body>' . $x . '</body></html>';
+            if (!\UTILS::detectUTF8($x)) $x = iconv('cp1251', 'utf-8', $x);
+            echo '<html><head><title>Oops</title></head><body>' . $x . '</body></html>';
         }
     }
 
@@ -1417,69 +1438,5 @@ static function action()
 
 /*  --- point::ENGINE_bottom --- */
 
-/**
- * умная склейка массивов в глубину
- * @param $tomerge
- * @param $part
- * @return bool
- */
-function array_merge_deep(&$tomerge, $part)
-{
-    $result = false;
-    // ассоциативный массив
-    foreach ($part as $k => &$v) {
-        if (array_key_exists($k, $tomerge)) {
-            if (is_array($tomerge[$k]) && is_array($v)) {
-                $result = array_merge_deep($tomerge[$k], $v) || $result;
-            } elseif (is_null($v)) {
-                if (isset($tomerge[$k])) {
-                    unset($tomerge[$k]);
-                    $result = true;
-                }
-            } else {
-                if (isset($tomerge[$k]) && $tomerge[$k] != $v) {
-                    $tomerge[$k] = $v;
-                    $result = true;
-                }
-            }
-        } elseif (!is_null($v)) {
-            $tomerge[$k] = $v;
-            $result = true;
-        }
-    }
-    unset ($v);
-    return $result;
-}
-
-/**
- * умная очистка значений в глубину
- * @param $tomerge
- * @param $part
- * @return bool
- */
-function array_clear_deep(&$tomerge, &$part)
-{
-    $result = false;
-    foreach ($part as $k => &$v) {
-        if (array_key_exists($k, $tomerge)) {
-            if (is_array($tomerge[$k]) && is_array($v)) {
-                $result = array_clear_deep($tomerge[$k], $v) || $result;
-                if(count($tomerge[$k])==0){
-                    unset($tomerge[$k]);
-                    $result = true;
-                }
-            } else {
-                if (isset($tomerge[$k])) {
-                    unset($tomerge[$k]);
-                    $result = true;
-                }
-            }
-        }
-    }
-    unset ($v);
-    return $result;
-}
-
-
 register_shutdown_function('ENGINE::_shutdown');
-ENGINE::$start_time=microtime(true);
+ENGINE::$start_time = microtime(true);

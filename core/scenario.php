@@ -9,7 +9,13 @@ class scenario extends base
      * @property spider spider
      * @var joblist
      */
-    var $joblist;
+    var $joblist = null;
+
+    /**
+     * область сохранения данных
+     * @var null
+     */
+    var $data = [];
 
     function __construct($joblist = null)
     {
@@ -17,29 +23,34 @@ class scenario extends base
         $this->joblist = $joblist;
     }
 
-    function outstream($streamcns,$parameter=''){
-        $this->joblist->outstream($streamcns,$parameter);
+    /**
+     * переходник для указателя вывода
+     * @param $streamcns
+     * @param string $parameter
+     */
+    function outstream($streamcns, $parameter = '')
+    {
+        $this->joblist->outstream($streamcns, $parameter);
     }
 
     /**
-     * Просто результат операции, чтобы было что выковыривать.
-     * @var
+     * Автоматическая обработка библиотечных классов, this->scaner, this->spider и так далее
+     * @param $name
+     * @return null
      */
-    var $result;
-
     function __get($name)
     {
-        switch ($name) {
-            default:
-                if(class_exists($name)) {
-                    $c=$name;
-                    $this->$name = new $c();
-                } else if(class_exists(__NAMESPACE__.'\\'.$name)) {
-                    $c=__NAMESPACE__.'\\'.$name;
-                    $this->$name = new $c();
-                } else
-                    return null;
+        // switch ($name) {
+        //     default:
+        $c = $name;
+        if (!class_exists($c) && class_exists(__NAMESPACE__ . '\\' . $c)){
+            $c = __NAMESPACE__ . '\\' . $name;
         }
+        if (class_exists($c)){
+            $this->$name = new $c();
+        } else
+            return null;
+        // }
         return $this->$name;
     }
 

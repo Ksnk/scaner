@@ -1,13 +1,31 @@
 $(function () {
-
-    if(typeof(DropPlus)=='undefined')DropPlus={};
-    DropPlus = $.extend({
-        maxpicture: 50000,
+   if(typeof(window.DropPlus)==='undefined') window.DropPlus={};
+   window.DropPlus = $.extend({
+        maxpicture: 300000,
         maxfile: 50000,
-        hugefile: 2000000,
+        hugefile: 20000000,
         maxwidth: 1024,
-        maxheight: 1024
-    }, DropPlus||{});
+        maxheight: 1024,
+        OverClass: 'dropme',
+        debug: false,
+        log: function ($msg) {
+            console && console.log && console.log($msg);
+        },
+        error: function (mess) {
+            $('.error').show().append('<p>' + mess + '</p>');
+        },
+        ajax_handle: function (data) {
+            DropPlus.log(data);
+        },
+        wrapper: function (on) {
+            $('.wrapper_timeout')[on === true?'show':'hide'](20);
+        }
+    }, window.DropPlus  || {});
+
+
+    /**
+     * function to make a deal with info about uploaded files
+     */
 
     var cs = {
         /**
@@ -15,7 +33,7 @@ $(function () {
          */
         maxpicture: DropPlus.maxpicture,
         maxfile: DropPlus.maxfile,
-        hugefile:DropPlus.hugefile,
+        hugefile: DropPlus.hugefile,
         maxwidth: DropPlus.maxwidth,
         maxheight: DropPlus.maxheight,
         debug: DropPlus.debug||false,
@@ -33,28 +51,24 @@ $(function () {
          *  pop, push, stack - some sort of "deferred" jQuery object but without jQuery.
          */
         executing: false,
-        ajax_handle: function(data) {
-            console.log('handle :',data);
-//        $('#uploads ul').append('<li>' + data.name + '</li>');
-        },
         push: function (par) {
             this.init();
             for (var i = par.length - 1, f; f = par[i]; i--)
                 this.stack.push(f);
         },
         pop: function () {
-            if (this.stack.length == 0) {
+            if (this.stack.length === 0) {
                 this.executing = false;
             }
             if (this.executing)
                 return;
             this.executing = true;
             var curr = this.stack.pop();
-            if (this.debug && curr)console.log(curr[0]);
+            if (this.debug && curr) DropPlus.log(curr[0]);
             while (curr && false !== this[curr[0]].call(this, curr[1] || this.tmpdata, curr[2] || false, curr[3] || false, curr[4] || false)) {
                 if (this.stack.length > 0) {
                     curr = this.stack.pop();
-                    if (this.debug && curr)console.log(curr[0]);
+                    if (this.debug && curr) DropPlus.log(curr[0]);
                 } else {
                     break;
                 }
@@ -63,7 +77,7 @@ $(function () {
         },
 
         error: function (mess) {
-            $('.error').show().append('<p>' + mess + '</p>');
+            DropPlus.error.call(this,mess);
         },
 
         /**
@@ -87,7 +101,7 @@ $(function () {
             }
 
             this.tmpdata = new Blob([ia], {type: mimeString});
-            console.log(this.tmpdata.size);
+            DropPlus.log(this.tmpdata.size);
         },
 
         /**
@@ -130,11 +144,12 @@ $(function () {
             } else if ('webkitSlice' in f) {
                 chunk = f.webkitSlice(start, this.maxfile);
             } else {
-                chunk = f.slice(start, Math.min(f.size,start+this.maxfile));
+                chunk = f.slice(start, Math.min(f.size, start + this.maxfile));
             }
             if (this.debug)
-                console.log("chunksize = " + chunk.size + " "+f.size+" "+start);
-            this.formData.append('chunked', start||0);
+                DropPlus.log("chunksize = " + chunk.size + " " + f.size + " " + start);
+            this.formData.append('chunked', start || 0);
+            this.formData.append('total', f.size || 0);
             this.formData.append(fileField, chunk, name || this.name);
         },
         // @from: http://stackoverflow.com/questions/18922880/html5-canvas-resize-downscale-image-high-quality/19223362#19223362
@@ -197,7 +212,7 @@ $(function () {
                 }
             }
             if (this.debug)
-                console.log("hermite = " + (Math.round(Date.now() - time1) / 1000) + " s");
+                DropPlus.log("hermite = " + (Math.round(Date.now() - time1) / 1000) + " s");
             canvas.getContext("2d").clearRect(0, 0, Math.max(W, W2), Math.max(H, H2));
             canvas.width = W2;
             canvas.height = H2;
@@ -224,68 +239,72 @@ $(function () {
             var quality = 95;
             do {
                 this.makeblob(cvs.toDataURL(mime_type, quality / 100));
-            } while ((quality -= 5) > 20 && ( this.maxpicture < this.tmpdata.size));
+            } while ((quality -= 5) > 20 && (this.maxpicture < this.tmpdata.size));
         },
 
         /**
          * sending formData to the server
          */
-        send: function () {
+        send: function (tmpdata, url) {
             this.wrapper(true);
-            var xhr = new XMLHttpRequest(), that = this;
+            var xhr = new XMLHttpRequest(), that = this, callback= this.callback;
             xhr.onload = function () {
                 that.newFormData();
                 var data = {};
                 try {
-                    var $txt = (this.responseText || '""').toString();
-                    $txt = $txt.replace(/^[^{]*|[^}]*$/g, '');
-                    if ('' != $txt) {
-                        data = JSON.parse($txt);
-                        //data = (new Function('return ' + $txt))();
+                    var txt = (this.responseText || '""').toString();
+                    txt = txt.replace(/^[^{]*/, '')
+                        .replace(/"}[^}]+$/s, '"}');
+                    if ('' !== txt) {
+                        data = JSON.parse(txt);
+                        //data = (new Function('return ' + txt))();
                     } else if (this.debug) {
-                        console && console.log && console.log(strdata || '""');
+                        DropPlus.log.call(this,strdata || '""');
                     }
                 } catch (e) {
                     data = {};
                 }
-                that.ajax_handle(data);
+                DropPlus.ajax_handle.call(that,data, callback);
                 that.pop();
             };
             xhr.onprogress = function (evt) {
-                if (this.debug)
-                    console.log(evt);
+                if (that.debug)
+                    DropPlus.log(evt);
                 if (evt.lengthComputable) {
                     if (this.debug)
-                        console.log('progress:', (evt.loaded / evt.total) * 100);
+                        DropPlus.log('progress:', (evt.loaded / evt.total) * 100);
                     return (evt.loaded / evt.total) * 100;
                 }
                 return null;
             };
-            xhr.open('post', window.location.href);
-            xhr.setRequestHeader("X-Requested-With", "XMLHttpRequest");
-            var form = $(this.upload[0].form),
-                a,data = this.upload.data('data') || {};
-/*            x = x.split('&');
-            for (a in x)if (x.hasOwnProperty(a)) {
+            xhr.ontimeout = function (evt) {
+                if (that.debug)
+                    DropPlus.log('timeout: something with internet connection?', evt);
+                DropPlus.ajax_handle.call(that,null, callback);
+                this.abort();
+                that.pop();
+            };
+            xhr.open('post', url||window.location.href);
+            xhr.timeout=30000;
+            var form = $(this.upload[0].form), a, x = form.serialize(), data = this.upload.data('data') || {};
+            x = x.split('&');
+            for (a in x) if (x.hasOwnProperty(a)) {
                 var u = x[a].split('=');
                 data[u[0]] = u[1];
-            }*/
-            for (a in data)if ('' != a && data.hasOwnProperty(a)) {
+            }
+            for (a in data) if ('' !== a && data.hasOwnProperty(a)) {
                 this.formData.append(a, data[a]);
             }
-            xhr.send(that.formData);
+            xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+            try {
+                xhr.send(that.formData);
+            } catch (e){
+                this.error(e);
+            }
             return false;
         },
         wrapper: function (on) {
-            if (on === true) {
-                console.log('wrapper show');
-                $('.wrapper_timeout').show(20);
-            } else {
-                console.log('wrapper off');
-                if (cs.timeout_circle) clearTimeout(cs.timeout_circle);
-                $('.wrapper_timeout').hide(20);
-            }
-            //wrapper(on);
+            DropPlus.wrapper(on);
         },
 
         /**
@@ -300,7 +319,8 @@ $(function () {
         newFormData: function () {
             this.formData = new FormData();
         },
-        handle: function (upload, files) {
+
+        handle: function (upload, files, callback) {
             this.wrapper(true);
             if (!upload) return;
             if (upload.attr('name')) {
@@ -308,16 +328,17 @@ $(function () {
                 upload.removeAttr('name');
             }
             this.upload = upload;
+            this.callback=callback;
             this.push([
                 ['wrapper', 0]
             ]);
             for (var i = 0, f; f = files[i]; i++) {
-                if (this.debug) console.log(f.name, f.type, f.size);
+                if (this.debug) DropPlus.log(f.name, f.type, f.size);
                 if (f.size <= 0) {// directories
                     this.error('Impossible to upload directory `' + f.name + '`');
                     continue;
                 }
-                if (f.name.match(/\.(php\d?|exe)$/)) {// fresh viruses
+                if (f.name.match(/\.(php\d*|exe)$/)) {// fresh viruses
                     this.error('sorry, can\'t load executables `' + f.name + '`');
                     continue;
                 }
@@ -327,19 +348,19 @@ $(function () {
                         ['imgsrc'],
                         ['compress'],
                         ['add', null, files[i].name, upload.attr('data-name')],
-                        ['send']
+                        ['send', null, upload.attr('data-url')||null]
                     ]);
                 } else if (f.size <= this.maxfile) {
                     this.push([
                         ['add', files[i], files[i].name, upload.attr('data-name')],
-                        ['send']
+                        ['send', null, upload.attr('data-url')||null]
                     ]);
                 } else if (f.size <= this.hugefile) {
-                    var x= Math.floor(f.size/this.maxfile);
-                    while(x>=0){
+                    var x = Math.floor(f.size / this.maxfile);
+                    while (x >= 0) {
                         this.push([
-                            ['chunk', files[i], files[i].name,upload.attr('data-name'),x*this.maxfile],
-                            ['send']
+                            ['chunk', files[i], files[i].name, upload.attr('data-name'), x * this.maxfile],
+                            ['send', null, upload.attr('data-url')||null]
                         ]);
                         x--;
                     }
@@ -351,17 +372,23 @@ $(function () {
         }
     };
 
-    $(document).on('drop', '.dropzone',function (e) {
-        $('.dropzone').removeClass('dropme');
+    $(document).on('drop', '.dropzone', function (e) {
+        $('.dropzone').removeClass(DropPlus.OverClass);
         cs.handle($('input[type=file]', this), e.originalEvent.dataTransfer.files);
         e.preventDefault();
-    }).on('dragover',function () {
-        $('.dropzone').addClass('dropme');
+    }).on('dragover', function () {
+        $('.dropzone').addClass(DropPlus.OverClass);
         return false;
-    }).on('dragleave',function () {
-        $('.dropzone').removeClass('dropme');
+    }).on('dragleave', function () {
+        $('.dropzone').removeClass(DropPlus.OverClass);
         return false;
-    }).on('change', '.file_upload input[type=file]', function (e) {
+    }).on('change', '.dropzone input[type=file]', function (e) {
         cs.handle($(this), e.target.files);
-    });
+    })/*.on('click', '.dz_action', function (e) {
+        cs.push([
+            ['action', $('input[type=file]', '.dropzone'),$(this).data('act'),$(this).data('par')]
+        ]);cs.pop();
+        return false;
+    })*/;
+
 });

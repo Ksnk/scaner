@@ -107,12 +107,12 @@ class evroset_scan_scenario extends scenario
                     $name = trim($result['name'], ':');
                     if (!empty($sub)) $name = rtrim($sub, ':') . ':' . $name;
                     $res[$name] = $result['value'];
-                    $this->result['names'][$name] = 1;
+                    $this->data['names'][$name] = 1;
                 }
             }
         } while ($this->spider->found);
 
-        $this->result['result'][] = $res;
+        $this->data['result'][] = $res;
     }
 
     function upload_img($img, $articul)
@@ -174,7 +174,7 @@ class evroset_scan_scenario extends scenario
             $jobs->append_scenario('searchfor', $x);
         }
 
-        $config->scenario->result['names'] = array(
+        $config->scenario->data['names'] = array(
             'articul' => 1,
             'name' => 1,
             'big_img' => 1,
@@ -182,17 +182,17 @@ class evroset_scan_scenario extends scenario
             'collection' => 1,
             'price' => 1
         );
-        $config->scenario->result['result'] = array();
+        $config->scenario->data['result'] = array();
 //print_r($jobs);
         while ($jobs->donext()) {
             ;
         }
 
-        $data_arr = array(array_keys($config->scenario->result['names']));
+        $data_arr = array(array_keys($config->scenario->data['names']));
 
-        foreach ($config->scenario->result['result'] as $kk => $v) {
+        foreach ($config->scenario->data['result'] as $kk => $v) {
             $x = array();
-            foreach ($config->scenario->result['names'] as $k => $vv) {
+            foreach ($config->scenario->data['names'] as $k => $vv) {
 
                 if (isset($v[$k])) {
                     if ($k == 'price') {

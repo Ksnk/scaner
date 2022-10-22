@@ -14,7 +14,16 @@ use \phpMorphy, \phpMorphy_Exception;
  * Class sqlfiddle_scenario
  * @tags ~debug
  */
-class xparcer_scenario extends scenario {
+class x_parser_scenario extends scenario {
+
+    /**
+     * 2+2=
+     * @param $a
+     * @param $b
+     */
+    function do_22($a=2,$b=2){
+        echo $a+$b;
+    }
 
     /**
      * Тестировать
@@ -163,4 +172,5 @@ class xparcer_scenario extends scenario {
         var_export($morphy->getPartOfSpeech($bulk),true));
 
     }
+    
 }
