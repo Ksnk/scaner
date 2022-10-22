@@ -108,6 +108,7 @@ class scaner
         $this->till = -1;
         $this->result = array();
         $this->filestart = 0;
+        return $this;
     }
 
     function close()
@@ -545,7 +546,7 @@ class scaner
                         '8bit');
                //$skiped = mb_substr($this->buf, $this->start, null, '8bit');
                 $this->start = mb_strlen($this->buf, '8bit');
-                if (false === $callback(array('_skiped' => $skiped))) break;
+                if (''===$skiped || false === $callback(array('_skiped' => $skiped))) break;
             }
             if (!$this->prepare(false)) break;
         }

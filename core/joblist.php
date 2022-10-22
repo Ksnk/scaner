@@ -36,6 +36,8 @@ class joblist extends base
      */
     private $tmp_handle = null;
 
+    private $mtime=null;
+
     /**
      * комплект функций работы с файлом. Необходимо использовать их совокупно, так как они сильно связаны
      */
