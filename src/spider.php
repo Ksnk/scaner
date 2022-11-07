@@ -24,6 +24,7 @@ class spider extends scaner
         $siteroot,
         $cookie_file = 'tmp_cookie.txt',
         $pclzip_path,
+        $redirected='',
         $info=[];
 
     var $lasturl = array(
@@ -52,7 +53,7 @@ class spider extends scaner
                     'file'=>false
                 ] ;
             $this->siteroot = $this->buildurl($url, true);
-            $redirect = '';
+            $this->redirected = $this->siteroot;
             if ($this->debug()) {
                 $verbose = fopen('php://temp', 'w+');
                 curl_setopt($ch, CURLOPT_VERBOSE, true);
