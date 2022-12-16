@@ -452,7 +452,7 @@ class scaner
                 if (false === $x) {
                     $this->start = mb_strlen($this->buf, '8bit');
                 } else {
-                    $this->start = $x + 1;
+                    $this->start = max($x + 1, mb_strlen($this->buf, '8bit')-1000);
                 }
                 if ($this->prepare(false)) {
                     continue;
