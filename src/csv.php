@@ -57,6 +57,7 @@ class csv extends scaner
     }
 
     function autodetect(){
+        $this->prepare();
         $buf = $this->getbuf();
         if ($encoding = mb_detect_encoding($buf, 'utf-8', true)) {
             $encoding = strtolower($encoding);
