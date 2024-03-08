@@ -12,10 +12,11 @@
     ],
     "require": {
         "php": ">=7.0",
-        "ext-curl": "*"
+        "ext-curl": "*",
+        "ksnk/core": "*"
     },
     "require-dev": {
-        "phpunit/phpunit": "^4.8.35 || ^5.7 || ^6.4 || ^7.0"
+        "phpunit/phpunit": "10.2.4"
     },
     "autoload": {
         "psr-4": {
@@ -26,5 +27,6 @@
         "psr-4": {
             "Ksnk\\Tests\\": "tests/"
         }
-    }
+    },
+    "minimum-stability": "dev"
 }

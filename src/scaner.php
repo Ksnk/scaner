@@ -387,7 +387,7 @@ class scaner
      * @param $reg
      * @return $this
      */
-    function scan($reg)
+    function scan($reg,$callback=null)
     {
         $this->prepare(false);
 

@@ -8,7 +8,7 @@
 
 namespace Ksnk\scaner;
 
-use mysql_xdevapi\Exception;
+use Ksnk\core\UTILS,mysql_xdevapi\Exception;
 
 /**
  * Паучёк
@@ -198,14 +198,14 @@ class spider extends scaner
         if (!isset($parsed['host'])) {
             return $url;
         }
-        $host_utf = idn_to_utf8($parsed['host'], 0 ,INTL_IDNA_VARIANT_UTS46);
-        $host_loc = idn_to_ascii($parsed['host'], 0 ,INTL_IDNA_VARIANT_UTS46);
+        $host_utf = UTILS::idn_to_utf8($parsed['host']);
+        $host_loc = UTILS::idn_to_ascii($parsed['host']);
         if (!empty($host_utf) && $host_utf != $parsed['host']) {
             $parsed['host'] = $host_utf;
         } elseif (!empty($host_loc) && $host_loc != $parsed['host']) {
             $parsed['host'] = $host_loc;
         }
-        if (!empty($parsed['path']) && $parsed['path']{0} != '/') {
+        if (!empty($parsed['path']) && $parsed['path'][0] != '/') {
             $parsed['path'] = preg_replace('~[^/]*$~', '', $this->lasturl['path']) . $parsed['path'];
         }
         foreach (['scheme' => '%s:', 'host' => '//%s', 'path' => '%s', 'query' => '?%s'] as $k => $v) {

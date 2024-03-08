@@ -5,7 +5,7 @@
 namespace Ksnk\Tests;
 
 use PHPUnit\Framework\TestCase;
-use Ksnk;
+use Ksnk, Ksnk\core\UTILS;
 
 //include "../vendor/autoload.php";
 
@@ -13,10 +13,10 @@ class certTest extends TestCase
 {
 
     function getCert($host){
-        $host_utf = idn_to_utf8($host, 0 ,INTL_IDNA_VARIANT_UTS46);
+        $host_utf = UTILS::idn_to_utf8($host);
         if(!empty($host_utf)) $host=$host_utf;
 
-        $host_loc = idn_to_ascii($host, 0 ,INTL_IDNA_VARIANT_UTS46);
+        $host_loc = UTILS::idn_to_ascii($host);
         if(!empty($host_loc)) $host=$host_loc;
 
         $url = 'ssl://'.$host.':443';
