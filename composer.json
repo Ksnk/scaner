@@ -27,6 +27,6 @@
     "minimum-stability": "dev",
     "prefer-stable": true,
     "require": {
-        "phpoffice/phpspreadsheet": "1.8.0"
+        "phpoffice/phpspreadsheet": "*"
     }
 }
