@@ -183,7 +183,7 @@ class csv extends scaner
                         $col = '';
                         while (preg_match('~[^' . $this->quote . ']*' . $this->quote . '()~s' . $key, $this->buf, $m, PREG_OFFSET_CAPTURE, $this->start)) {
                             $this->start = $m[1][1];
-                            if ($this->buf{$this->start} == $this->quote) {
+                            if ($this->buf[$this->start] == $this->quote) {
                                 $this->start++;
                                 $col .= $m[0][0];
                             } else {
